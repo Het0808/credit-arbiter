@@ -216,3 +216,13 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local secrets — NEVER commit
+.env
+
+# Ingestion pipeline outputs (gitignored; committed only via CI artefacts)
+ddl/
+rejects/
+
+# Data
+data/**/*.csv

@@ -1,0 +1,5 @@
+# Core data + DB adapter
+pandas>=2.0.0
+psycopg2-binary>=2.9.9   # Use psycopg2 (non-binary) in production for full SSL support
+python-dotenv>=1.0.0
+pyyaml>=6.0.1

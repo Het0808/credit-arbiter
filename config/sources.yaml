@@ -1,0 +1,75 @@
+# Credit Arbiter — CSV-to-table source mapping
+# ============================================================
+# Edit this file to add, remove, or disable source files.
+# NO ingestion code changes are ever required — the pipeline
+# reads this config at runtime.
+#
+# Fields per source entry
+# -----------------------
+#   file        Required.  Filename only (no path).  The pipeline
+#               resolves the full path via RAW_DATA_DIR env var.
+#
+#   table       Required.  Target table name inside DB_SCHEMA.
+#               Convention: raw_<snake_case_of_filename>
+#
+#   description Optional.  Human-readable note — appears in log output.
+#
+#   enabled     Optional (default: true).  Set to false to skip this
+#               source without removing the entry.  Useful during
+#               debugging or phased rollouts.
+# ============================================================
+
+sources:
+
+  # ---- Primary application tables ----------------------------------------
+
+  - file: application_train.csv
+    table: raw_application_train
+    description: "Loan application records with TARGET label (training set)"
+    enabled: true
+
+  - file: application_test.csv
+    table: raw_application_test
+    description: "Loan application records without TARGET label (scoring set)"
+    enabled: true
+
+  # ---- Credit Bureau data ------------------------------------------------
+
+  - file: bureau.csv
+    table: raw_bureau
+    description: "Client credits at other financial institutions (from Credit Bureau)"
+    enabled: true
+
+  - file: bureau_balance.csv
+    table: raw_bureau_balance
+    description: "Monthly balance snapshots of previous Credit Bureau credits"
+    enabled: true
+
+  # ---- Previous Home Credit loans ----------------------------------------
+
+  - file: previous_application.csv
+    table: raw_previous_application
+    description: "All previous loan applications at Home Credit"
+    enabled: true
+
+  - file: POS_CASH_balance.csv
+    table: raw_pos_cash_balance
+    description: "Monthly balance snapshots of previous POS and cash loans"
+    enabled: true
+
+  - file: credit_card_balance.csv
+    table: raw_credit_card_balance
+    description: "Monthly balance snapshots of previous credit card products"
+    enabled: true
+
+  - file: installments_payments.csv
+    table: raw_installments_payments
+    description: "Repayment history for previously disbursed credits"
+    enabled: true
+
+  # ---- Reference / data dictionary ---------------------------------------
+
+  - file: HomeCredit_columns_description.csv
+    table: raw_columns_description
+    description: "Data dictionary — column descriptions for all Home Credit tables"
+    enabled: true
