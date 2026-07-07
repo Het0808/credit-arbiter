@@ -50,19 +50,74 @@
 
         <!-- Dashboard Placeholder (Hidden by default) -->
         <div id="dashboard-view" class="dashboard hidden">
-          <h2>Welcome, Underwriter!</h2>
-          <p id="user-info"></p>
-          <div class="dashboard-stats">
-            <div class="stat-card">
-              <h3>Pending Reviews</h3>
-              <p class="stat-value">12</p>
+          <div class="dashboard-header">
+            <div>
+              <h2>Welcome, Underwriter!</h2>
+              <p id="user-info"></p>
             </div>
-            <div class="stat-card">
-              <h3>Avg Handle Time</h3>
-              <p class="stat-value">18m</p>
+            <button id="logout-btn" class="btn secondary-btn">Logout</button>
+          </div>
+
+          <!-- Application Queue -->
+          <div id="queue-view">
+            <h3 class="section-heading">Application Queue</h3>
+            <table class="queue-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Contract Type</th>
+                  <th>Income</th>
+                  <th>Credit</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="queue-rows"></tbody>
+            </table>
+          </div>
+
+          <!-- Application Detail + Assess -->
+          <div id="detail-view" class="hidden">
+            <button id="back-to-queue-btn" class="btn secondary-btn back-btn">&larr; Back to queue</button>
+            <h3 class="section-heading">Application <span id="detail-external-id"></span></h3>
+            <div id="detail-incomplete-badge" class="badge badge-incomplete hidden">INCOMPLETE - missing: <span id="detail-missing-fields"></span></div>
+
+            <div class="profile-grid" id="detail-profile"></div>
+
+            <button id="assess-btn" class="btn primary-btn">Assess</button>
+
+            <div id="assessment-result" class="evidence-panel hidden">
+              <h3 class="section-heading">Evidence &amp; Recommendation</h3>
+
+              <div id="escalation-banner" class="escalation-banner hidden">Escalated for human review</div>
+
+              <div class="evidence-row">
+                <span class="evidence-label">Risk Score / Band</span>
+                <span id="result-risk"></span>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Retrieved Policy Clause</span>
+                <div id="result-clause"></div>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Regulatory Status</span>
+                <span id="result-regulatory"></span>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Recommendation</span>
+                <span id="result-recommendation"></span>
+              </div>
+
+              <div id="decision-controls" class="decision-controls">
+                <button id="accept-btn" class="btn primary-btn">Accept</button>
+                <button id="show-override-btn" class="btn secondary-btn">Override</button>
+              </div>
+              <div id="override-form" class="hidden">
+                <textarea id="override-reason" class="override-textarea" placeholder="Reason for override (required)"></textarea>
+                <button id="submit-override-btn" class="btn primary-btn">Submit Override</button>
+              </div>
+              <div id="decision-confirmation" class="alert hidden"></div>
             </div>
           </div>
-          <button id="logout-btn" class="btn secondary-btn">Logout</button>
         </div>
 
       </div>
