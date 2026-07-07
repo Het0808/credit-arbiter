@@ -7,6 +7,7 @@
   --text-main: #c5c6c7;
   --text-light: #ffffff;
   --error: #ff4b4b;
+  --warning: #f5a623;
 }
 
 * {
@@ -76,6 +77,11 @@ body {
   width: 100%;
   max-width: 420px;
   padding: 20px;
+  transition: max-width 0.3s ease;
+}
+
+#app.dashboard-wide {
+  max-width: 960px;
 }
 
 .glass-panel {
@@ -256,4 +262,227 @@ body {
   font-size: 24px;
   font-weight: 700;
   color: var(--text-light);
+}
+
+/* Dashboard header */
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+  gap: 20px;
+}
+
+.dashboard-header .btn {
+  width: auto;
+  padding: 10px 18px;
+  white-space: nowrap;
+}
+
+.section-heading {
+  color: var(--text-light);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 20px 0 12px;
+}
+
+/* Queue table */
+.queue-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: rgba(11, 12, 16, 0.5);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.queue-table th,
+.queue-table td {
+  text-align: left;
+  padding: 12px 14px;
+  font-size: 13px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.queue-table th {
+  color: var(--text-main);
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+}
+
+.queue-row {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.queue-row:hover {
+  background: rgba(102, 252, 241, 0.08);
+}
+
+.queue-row td {
+  color: var(--text-light);
+}
+
+/* Back button */
+.back-btn {
+  width: auto;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+}
+
+/* Profile grid */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  background: rgba(11, 12, 16, 0.5);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-field label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-main);
+  margin-bottom: 4px;
+}
+
+.profile-field span {
+  font-size: 14px;
+  color: var(--text-light);
+}
+
+/* Badges */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-incomplete {
+  background: rgba(245, 166, 35, 0.15);
+  border: 1px solid var(--warning);
+  color: var(--warning);
+  margin: 10px 0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  text-transform: none;
+  font-weight: 400;
+  font-size: 13px;
+}
+
+.badge-low, .badge-approve {
+  background: rgba(102, 252, 241, 0.15);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+}
+
+.badge-medium, .badge-refer {
+  background: rgba(245, 166, 35, 0.15);
+  color: var(--warning);
+  border: 1px solid var(--warning);
+}
+
+.badge-high, .badge-decline {
+  background: rgba(255, 75, 75, 0.15);
+  color: var(--error);
+  border: 1px solid var(--error);
+}
+
+/* Evidence panel */
+.evidence-panel {
+  background: rgba(11, 12, 16, 0.5);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.evidence-row {
+  margin-bottom: 16px;
+}
+
+.evidence-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  color: var(--text-main);
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+}
+
+.clause-title {
+  color: var(--text-light);
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.clause-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-main);
+  margin-bottom: 6px;
+}
+
+.clause-meta {
+  font-size: 11px;
+  color: var(--primary);
+}
+
+.escalation-banner {
+  background: rgba(245, 166, 35, 0.15);
+  border: 1px solid var(--warning);
+  color: var(--warning);
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Decision controls */
+.decision-controls {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.decision-controls .btn {
+  width: auto;
+  padding: 10px 20px;
+  flex: 1;
+}
+
+.override-textarea {
+  width: 100%;
+  min-height: 80px;
+  margin-top: 12px;
+  padding: 12px 15px;
+  background: rgba(11, 12, 16, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-light);
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+.override-textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(102, 252, 241, 0.2);
+}
+
+#override-form .btn {
+  width: auto;
+  padding: 10px 20px;
+  margin-top: 10px;
 }

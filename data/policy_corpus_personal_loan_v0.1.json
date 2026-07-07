@@ -1,0 +1,37 @@
+{
+  "scheme": "Personal Loan",
+  "version": "v0.1",
+  "effective_date": "2026-07-01",
+  "clauses": [
+    {
+      "clause_id": "POL-PL-001",
+      "title": "Debt-to-Income (DTI) Threshold",
+      "text": "Debt-to-Income (DTI) ratio, calculated as the applicant's monthly loan annuity divided by monthly income, must not exceed 50% for Personal Loan approval. Applications with a DTI ratio above this threshold cannot be auto-approved and require referral to a human underwriter or an outright decline based on compensating factors.",
+      "tags": ["dti", "debt-to-income", "affordability", "annuity", "income"]
+    },
+    {
+      "clause_id": "POL-PL-002",
+      "title": "Minimum Income Requirement",
+      "text": "Applicants for a Personal Loan must demonstrate a minimum verified annual income of $15,000 (or local currency equivalent). Applications where verified income falls below this minimum income floor cannot be approved and must be referred for manual underwriting review.",
+      "tags": ["minimum income", "income floor", "verified income", "eligibility"]
+    },
+    {
+      "clause_id": "POL-PL-003",
+      "title": "Loan-to-Income (LTI) Cap",
+      "text": "The total requested credit amount must not exceed 6 times the applicant's verified annual income (a Loan-to-Income, or LTI, cap of 6.0x) for Personal Loan products. Requests exceeding this cap require additional collateral, a co-signer, or explicit human underwriter override before approval.",
+      "tags": ["loan-to-income", "lti", "credit amount", "cap", "collateral"]
+    },
+    {
+      "clause_id": "POL-PL-004",
+      "title": "Thin-File Escalation Rule",
+      "text": "Applicants with fewer than 24 months of employment history, no prior credit bureau record, or an unemployment/pension sentinel value in the employment-duration field are classified as thin-file. Thin-file applications must be escalated to a human underwriter for manual review regardless of the model-predicted risk score or band.",
+      "tags": ["thin-file", "employment history", "escalation", "unemployed", "pensioner", "bureau record"]
+    },
+    {
+      "clause_id": "POL-PL-005",
+      "title": "Fairness Guardrail",
+      "text": "No recommendation may be based on, or materially influenced by, an applicant's gender, age, marital status, or other protected characteristic. Any model feature or policy rule found to correlate with a protected attribute above the fairness guardrail threshold must be excluded from automated decisioning and flagged for fairness audit before it can be used.",
+      "tags": ["fairness", "protected characteristic", "gender", "age", "bias", "guardrail"]
+    }
+  ]
+}

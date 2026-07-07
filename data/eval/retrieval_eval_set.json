@@ -1,0 +1,14 @@
+[
+  {"query": "What is the maximum debt-to-income ratio allowed for a personal loan?", "expected_clause_id": "POL-PL-001"},
+  {"query": "The applicant's DTI ratio, annuity divided by monthly income, exceeds the threshold", "expected_clause_id": "POL-PL-001"},
+  {"query": "What is the minimum income required to qualify for a personal loan?", "expected_clause_id": "POL-PL-002"},
+  {"query": "Applicant's verified annual income is below the minimum income floor", "expected_clause_id": "POL-PL-002"},
+  {"query": "What is the maximum loan-to-income cap for personal loans?", "expected_clause_id": "POL-PL-003"},
+  {"query": "Requested credit amount exceeds 6 times annual income, needs collateral or co-signer", "expected_clause_id": "POL-PL-003"},
+  {"query": "Applicant has a thin credit file with short employment history", "expected_clause_id": "POL-PL-004"},
+  {"query": "Employment duration field shows the unemployed pensioner sentinel value, should this escalate?", "expected_clause_id": "POL-PL-004"},
+  {"query": "How many months of employment history before an applicant is considered thin-file?", "expected_clause_id": "POL-PL-004"},
+  {"query": "Can gender or age be used to influence the lending recommendation?", "expected_clause_id": "POL-PL-005"},
+  {"query": "Fairness guardrail threshold for protected characteristic bias audit", "expected_clause_id": "POL-PL-005"},
+  {"query": "Is there a minimum income floor for personal loan approval?", "expected_clause_id": "POL-PL-002"}
+]
