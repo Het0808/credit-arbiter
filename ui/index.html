@@ -55,7 +55,17 @@
               <h2>Welcome, Underwriter!</h2>
               <p id="user-info"></p>
             </div>
-            <button id="logout-btn" class="btn secondary-btn">Logout</button>
+            <div class="header-actions">
+              <button id="show-ops-btn" class="btn secondary-btn">Ops Dashboard</button>
+              <button id="logout-btn" class="btn secondary-btn">Logout</button>
+            </div>
+          </div>
+
+          <!-- Ops Dashboard -->
+          <div id="ops-view" class="hidden">
+            <button id="ops-back-btn" class="btn secondary-btn back-btn">&larr; Back to queue</button>
+            <h3 class="section-heading">Operations Dashboard</h3>
+            <div id="ops-stat-grid" class="stat-grid"></div>
           </div>
 
           <!-- Application Queue -->
@@ -95,12 +105,36 @@
                 <span id="result-risk"></span>
               </div>
               <div class="evidence-row">
-                <span class="evidence-label">Retrieved Policy Clause</span>
+                <span class="evidence-label">Top Risk Factors (SHAP)</span>
+                <div id="result-risk-factors" class="risk-factor-list"></div>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Loan Scheme</span>
+                <span id="result-scheme"></span>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Retrieved Policy Clauses</span>
                 <div id="result-clause"></div>
               </div>
               <div class="evidence-row">
+                <span class="evidence-label">Policy Rule Evaluation</span>
+                <div id="result-policy-rules"></div>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Document Verification</span>
+                <div id="result-documents"></div>
+              </div>
+              <div class="evidence-row">
                 <span class="evidence-label">Regulatory Status</span>
-                <span id="result-regulatory"></span>
+                <div id="result-regulatory"></div>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Fairness Audit</span>
+                <div id="result-fairness"></div>
+              </div>
+              <div class="evidence-row">
+                <span class="evidence-label">Narrative Explanation</span>
+                <div id="result-explanation" class="narrative-explanation"></div>
               </div>
               <div class="evidence-row">
                 <span class="evidence-label">Recommendation</span>
@@ -112,6 +146,14 @@
                 <button id="show-override-btn" class="btn secondary-btn">Override</button>
               </div>
               <div id="override-form" class="hidden">
+                <select id="override-reason-code" class="override-reason-code">
+                  <option value="">Select a reason code&hellip;</option>
+                  <option value="insufficient_evidence">Insufficient evidence</option>
+                  <option value="policy_too_strict">Policy too strict for this case</option>
+                  <option value="doc_follow_up">Documentation follow-up needed</option>
+                  <option value="fairness_concern">Fairness concern</option>
+                  <option value="other">Other</option>
+                </select>
                 <textarea id="override-reason" class="override-textarea" placeholder="Reason for override (required)"></textarea>
                 <button id="submit-override-btn" class="btn primary-btn">Submit Override</button>
               </div>
