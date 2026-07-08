@@ -1,0 +1,910 @@
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+PRODUCT  REQUIREMENTS  DOCUMENT 
+Halcyon  Credit  —  Agentic  Underwriting  
+Copilot Version  2.0   ·   Sprint  0   ·   Futurense  AI  Clinic   ·   Capstone  Project  02 
+ 
+1    Executive  Summary 
+Halcyon  Credit  is  a  digital  consumer  lender  offering  personal  loans  to  applicants  who  frequently  hold  thin  or  
+non-traditional
+ 
+credit
+ 
+histories.
+ 
+Applications
+ 
+arrive
+ 
+faster
+ 
+than
+ 
+underwriters
+ 
+can
+ 
+work
+ 
+them
+ 
+manually.
+ 
+Each
+ 
+file
+ 
+requires
+ 
+income
+ 
+verification,
+ 
+bureau
+ 
+cross-checks,
+ 
+policy
+ 
+validation,
+ 
+and
+ 
+a
+ 
+documented
+ 
+decision
+ 
+rationale.
+ 
+The
+ 
+queue
+ 
+grows;
+ 
+handle
+ 
+time
+ 
+is
+ 
+high;
+ 
+decisions
+ 
+vary
+ 
+across
+ 
+reviewers;
+ 
+and
+ 
+decline
+ 
+reasons
+ 
+are
+ 
+written
+ 
+ad-hoc
+ 
+with
+ 
+no
+ 
+traceability
+ 
+to
+ 
+specific
+ 
+policy
+ 
+clauses.  This  PRD  specifies  a  human-in-the-loop  Agentic  Underwriting  Copilot  that  assembles  the  facts  of  an  
+application,
+ 
+predicts
+ 
+repayment
+ 
+risk
+ 
+using
+ 
+a
+ 
+trained
+ 
+ML
+ 
+model,
+ 
+evaluates
+ 
+compliance
+ 
+against
+ 
+the
+ 
+applicable
+ 
+loan-scheme
+ 
+policy
+ 
+via
+ 
+a
+ 
+Retrieval-Augmented
+ 
+Generation
+ 
+(RAG)
+ 
+engine,
+ 
+verifies
+ 
+documents
+ 
+and
+ 
+regulatory
+ 
+signals,
+ 
+audits
+ 
+the
+ 
+decision
+ 
+for
+ 
+fairness,
+ 
+and
+ 
+produces
+ 
+an
+ 
+evidence-backed
+ 
+recommendation.
+ 
+The
+ 
+system
+ 
+recommends
+ 
+—
+ 
+it
+ 
+does
+ 
+not
+ 
+decide.
+ 
+Final
+ 
+authority
+ 
+remains
+ 
+with
+ 
+a
+ 
+licensed
+ 
+human
+ 
+underwriter. 
+ 
+2    Problem  Statement 
+Current  underwriting  at  Halcyon  Credit  exhibits  five  measurable  failure  modes:  •  Time  intensity.   Average  file  review  time  is  approximately  45  minutes  per  application.  The  copilot  
+target
+ 
+is
+ 
+≤
+ 
+22
+ 
+minutes
+ 
+(≥
+ 
+50%
+ 
+reduction). •  Scalability.   Application  volume  during  surges  exceeds  underwriter  capacity,  creating  backlogs  that  
+damage
+ 
+applicant
+ 
+experience
+ 
+and
+ 
+revenue. •  Inconsistency.   Same-profile  applications  receive  different  outcomes  across  reviewers.  Decision  
+consistency
+ 
+target:
+ 
+≥
+ 
+95%
+ 
+on
+ 
+matched
+ 
+profiles. •  Traceability  gap.   Decline  reasons  are  written  ad-hoc  and  not  linked  to  policy  clauses,  creating  
+regulatory
+ 
+exposure.
+ 
+Audit
+ 
+readiness
+ 
+target:
+ 
+100%. •  Cost.   Manual  underwriting  is  expensive  to  scale.  Unit  cost  target:  <  $0.05  per  application  with  the  
+copilot.  A  pure  automation  solution  is  unsuitable.  Lending  decisions  require  explainability,  regulatory  defensibility,  
+policy
+ 
+adherence,
+ 
+fairness
+ 
+monitoring,
+ 
+and
+ 
+human
+ 
+accountability.
+ 
+The
+ 
+requirement
+ 
+is
+ 
+a
+ 
+copilot. 
+ 
+3    Vision  Statement 
+VISION   Enable  underwriters  to  make  faster,  more  consistent,  and  more  explainable  lending  decisions  through  a  
+transparent
+ 
+AI-assisted
+ 
+workflow
+ 
+that
+ 
+combines
+ 
+ML
+ 
+risk
+ 
+prediction,
+ 
+RAG-grounded
+ 
+policy
+ 
+evaluation,
+ 
+document
+ 
+Capstone  Project  Page  
+1  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+verification,  regulatory  validation,  and  fairness  auditing  —  with  a  human  underwriter  in  the  loop  for  every  final  
+decision. 
+ 
+4    Target  Users  &  Jobs  to  Be  Done 
+4.1   Loan  Underwriter  (Primary) Goal:  assess  applications  accurately  and  efficiently,  with  evidence  assembled  for  them. •  Large  application  queues  with  repetitive  manual  cross-checks •  Inconsistent  decision  documentation,  especially  on  borderline  cases •  Difficulty  writing  defensible  decline  reasons  tied  to  specific  policy  clauses Job  to  be  done:  "When  reviewing  an  application,  give  me  the  applicant's  verified  risk  profile,  the  applicable  
+policy
+ 
+findings,
+ 
+and
+ 
+an
+ 
+evidence-backed
+ 
+draft
+ 
+recommendation
+ 
+—
+ 
+so
+ 
+I
+ 
+can
+ 
+approve,
+ 
+adjust,
+ 
+or
+ 
+override
+ 
+without
+ 
+re-reading
+ 
+the
+ 
+raw
+ 
+file."  
+4.2   Compliance  Officer  (Secondary) Goal:  ensure  every  decision  is  traceable,  policy-adherent,  and  defensible  to  regulators. •  Lack  of  audit  trails  linking  decisions  to  specific  policy  clauses  or  applicant  data •  Unclear  basis  for  decisions  on  edge  cases  or  borderline  profiles Job  to  be  done:  "When  auditing  a  decision,  show  me  why  the  recommendation  was  produced,  which  policy  
+clauses
+ 
+apply,
+ 
+whether
+ 
+fairness
+ 
+requirements
+ 
+were
+ 
+satisfied,
+ 
+and
+ 
+what
+ 
+the
+ 
+human
+ 
+underwriter
+ 
+changed
+ 
+—
+ 
+so
+ 
+I
+ 
+can
+ 
+defend
+ 
+it
+ 
+to
+ 
+a
+ 
+regulator."  
+4.3   Operations  Manager  (Tertiary) Goal:  maintain  throughput,  control  cost,  and  monitor  quality  without  increasing  headcount. •  Underwriting  backlogs  and  capacity  constraints  during  volume  surges •  Opaque  cost  and  quality  metrics  with  no  per-application  unit  economics Job  to  be  done:  "When  monitoring  underwriting  operations,  show  me  throughput,  per-application  cost,  
+latency,
+ 
+recommendation
+ 
+acceptance
+ 
+rate,
+ 
+and
+ 
+escalation
+ 
+rate
+ 
+—
+ 
+so
+ 
+I
+ 
+can
+ 
+identify
+ 
+bottlenecks
+ 
+and
+ 
+control
+ 
+spend." 
+ 
+5    Scope 
+Status Item 
+IN  SCOPE 
+Probability  of  default  prediction  using  supervised  ML  on  structured  loan  application  data 
+IN  SCOPE 
+Multi-scheme  policy  evaluation  —  Personal  Loan,  Education  Loan,  Vehicle  Loan,  Business  Loan,  First-Time  Borrower  Program,  Low-Income  Assistance  Program 
+IN  SCOPE 
+Retrieval-Augmented  Generation  (RAG)  policy  engine  grounding  every  recommendation  in  retrieved  policy  clauses 
+IN  SCOPE 
+Policy  version  management  and  scheme-aware  recommendation  generation 
+IN  SCOPE 
+Fairness  monitoring  across  protected  and  proxy  demographic  segments  on  every  decision 
+Capstone  Project  Page  
+2  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+Status Item 
+IN  SCOPE 
+Evidence-backed  recommendation  generation  (Approve  /  Decline  /  Refer)  with  cited  applicant  data,  risk  score,  and  policy  references 
+IN  SCOPE 
+Human-in-the-loop  workflow  with  defined  escalation  triggers 
+IN  SCOPE 
+Audit  logging:  every  decision  stores  inputs,  model  outputs,  policy  checks,  fairness  results,  and  final  recommendation 
+IN  SCOPE 
+Retrieval  quality  monitoring  (context  precision,  context  recall,  faithfulness) 
+IN  SCOPE 
+Underwriter  productivity  and  cost-per-application  monitoring 
+OUT  OF  SCOPE 
+Autonomous  loan  approval  or  decline  without  human  sign-off 
+OUT  OF  SCOPE 
+Live  credit  bureau  API  integrations  (mocked  in  v1) 
+OUT  OF  SCOPE 
+Real  identity  verification  or  KYC  integrations  (mocked  in  v1) 
+OUT  OF  SCOPE 
+Production-grade  financial  deployment  or  regulatory  licensing 
+OUT  OF  SCOPE 
+Applicant-facing  portal  or  communication  channels 
+OUT  OF  SCOPE 
+Fraud  detection  beyond  signals  available  in  the  dataset 
+OUT  OF  SCOPE 
+Multi-jurisdiction  legal  compliance  beyond  simulated  policy  corpus   
+OUT  OF  SCOPE  
+Loss  Given  Default  (LGD)  and  Exposure  at  Default  (EAD)  modelling  —  recovery  rate  estimation,  collateral  valuation,  and  collections  assumptions  are  portfolio  risk  functions  operated  post-disbursement  by  the  Risk  Analytics  team.  Even  though  they  can  influence  credit  decisions  rarely,  its  kept  as  a  future  extension  in  V2   
+ 
+6    Functional  Requirements 
+ ID Requirement Description Outputs 
+FR-1 
+Application  Ingestion 
+Ingest  and  normalise  structured  loan  application  data  from  upstream  systems. 
+Normalised  applicant  profile 
+FR-2 
+Credit  Risk  Prediction 
+Estimate  probability  of  default  (PD)  using  a  trained  ML  model  along  with  top  contributor  
+Risk  score  ·  Risk  band  ·  top  contributor  features 
+Capstone  Project  Page  
+3  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+ID Requirement Description Outputs 
+features  for  the  score.ML  model  —  not  the  LLM  —  produces  the  risk  number. 
+FR-3 
+Multi-Scheme  Policy  Evaluation 
+Evaluate  the  application  against  the  applicable  loan-scheme  policy  (Personal,  Education,  Vehicle,  Business,  First-Time  Borrower,  Low-Income).  Policy  clauses  must  be  retrieved  via  RAG  before  evaluation.  Support  policy  versioning  and  a  complete  audit  trail  of  applied  clauses. 
+Applicable  policy  set  ·  Passed  rules  ·  Failed  rules  ·  Escalation  requirements 
+FR-4 
+Policy  Retrieval  Engine 
+Retrieve  policy  clauses  from  the  lending  policy  knowledge  base  before  recommendation  generation.  Every  recommendation  must  reference  retrieved  evidence  —  no  recommendation  without  supporting  retrieval  context. 
+Retrieved  policy  passages  ·  Retrieval  confidence  score  ·  Source  attribution 
+FR-5 
+Document  Verification 
+Verify  uploaded  applicant  documents  (salary  slips,  bank  statements,  employment  letters,  identity  and  address  proofs,  explanation  letters):  completeness,  consistency,  cross-document  validation,  and  fraud  signal  detection. 
+Verification  findings  ·  Consistency  findings  ·  Missing  information  report 
+FR-6 
+Regulatory  Validation 
+Validate  applicant  information  against  mock  regulatory  services  (identity,  employment,  tax,  sanctions).  Retry  policy  and  human-escalation  fallback  must  be  implemented.  The  system  must  never  fabricate  a  regulatory  response. 
+Verification  status  ·  Compliance  findings  ·  Escalation  trigger  if  unresolved 
+FR-7 
+Fairness  Audit Evaluate  every  decision  for  disparate  impact  across  protected  and  proxy  demographic  groups.  Raise  a  bias  alert  and  trigger  escalation  if  the  fairness  gap  exceeds  the  guardrail  threshold. 
+Fairness  indicators  ·  Bias  alerts  ·  Segment-level  approval-rate  delta 
+FR-8 
+Recommendation  Generation 
+Generate  one  of  three  recommendations  —  Approve,  Decline,  or  Refer  to  Human  Review  —  supported  by  risk  score,  policy  findings,  regulatory  checks,  document  findings,  and  fairness  result.  The  system  may  not  emit  Approve  or  Decline  without  a  complete  evidence  chain. 
+Recommendation  ·  Evidence  chain  ·  Escalation  flag 
+FR-9 
+Explanation  Generation 
+Produce  a  human-readable,  auditable  rationale  grounded  in  retrieved  policy  clauses,  applicant  data,  and  ML  model  outputs.  Every  factual  claim  in  the  explanation  must  be  traceable  to  a  source. 
+Narrative  explanation  ·  Policy  references  ·  Supporting  applicant  data  ·  Risk  model  factors 
+FR-10 
+Audit  Logging Record  a  complete,  immutable  decision  record  for  every  application  processed. 
+Inputs  ·  ML  outputs  ·  Policy  checks  ·  Regulatory  checks  ·  Document  findings  ·  Fairness  result  ·  Final  recommendation  ·  Timestamp 
+FR-11 
+Human-in-the-Loop  Workflow 
+Route  applications  meeting  any  escalation  criterion  to  a  human  underwriter  queue.  Escalation  triggers:  missing  information,  ML  confidence  below  threshold,  policy  conflict,  regulatory  verification  failure,  fairness  alert,  thin-file  flag. 
+Escalation  record  ·  Reason  code  ·  Underwriter  queue  entry 
+Capstone  Project  Page  
+4  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+  
+7    Non-Functional  Requirements 
+Dimension Requirement 
+Latency the  time  until  the  system  returns  a  complete,  auditable  recommendation≤  10  s.  Maximum  (P95)  ≤  20  s.  ML  inference  budget  ≤  300  ms.  RAG  retrieval  budget  ≤  600  ms. 
+Availability Target  uptime  ≥  99%  during  pilot  operations. 
+Cost  ceiling Maximum  cost  per  assessed  application  <  $0.05.  Guardrail  alarm  triggers  human-path  fallback  if  exceeded. 
+Data  privacy No  raw  PII  in  LLM  prompts.  Application  identifier  and  aggregated  features  only.  SSN,  DOB,  and  account  numbers  redacted  before  any  model  call. 
+Explainability Every  recommendation  must  contain  an  evidence  chain:  applicant  data  references,  ML  risk  factors  (SHAP),  retrieved  policy  clauses  (with  source  IDs),  regulatory  check  result,  fairness  result. 
+Audit  trail Every  decision  record  is  immutable  and  queryable.  Compliance  officer  must  be  able  to  reconstruct  the  full  reasoning  path  from  stored  artefacts  alone. 
+Human  fallback Any  failure  in  ML  inference,  RAG  retrieval,  document  verification,  or  regulatory  check  must  degrade  to  human-review  path.  The  system  must  never  auto-decide  on  a  failed  sub-component. 
+Security API  keys  managed  via  secrets  manager,  never  in  code  or  prompts.  Least-privilege  tool  access.  Audit  logging  enabled  for  all  external  service  calls. 
+ 
+8    Success  Metrics  &  KPIs 
+NORTH  STAR:  weighted  Business  Decision  Utility  Score  combining  AUC  (weight  0.3),  Policy  Adherence  
+(0.25),
+ 
+Recommendation
+ 
+Acceptance
+ 
+Rate
+ 
+(0.25),
+ 
+and
+ 
+Fairness
+ 
+Compliance
+ 
+pass/fail
+ 
+gate
+ 
+(0.20)
+ 
+.
+   GUARDRAIL  1   Fairness  gap  across  demographic  segments  must  never  exceed  5  percentage  points.  This  is  a  
+hard
+ 
+ship
+ 
+block
+ 
+—
+ 
+no
+ 
+headline
+ 
+metric
+ 
+improvement
+ 
+overrides
+ 
+it.  GUARDRAIL  2   Cost  per  assessed  application  must  never  exceed  $0.08.  If  breached,  the  system  degrades  to  the  
+human-review
+ 
+path
+ 
+automatically.  GUARDRAIL  3   Policy  adherence  must  reach  100%.  Any  recommendation  that  violates  a  stated  lending  rule  is  a  
+ship-blocking
+ 
+defect.  Supporting  KPIs  with  targets  and  do-not-ship  floors:  
+Capstone  Project  Page  
+5  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+Category KPI Definition How  measured Target Do-not-ship  floor 
+ML  Quality
+ Decision  quality  (AUC) 
+Agreement  with  ground-truth  outcome  on  held-out  loans 
+AUC  on  held-out  test  set
+ 
+≥  0.80 <  0.70
+ 
+ML  Quality
+ Precision True  positives  /  (TP  +  FP)  on  default  prediction 
+Sklearn  classification  report
+ 
+≥  75% <  65%
+ 
+ML  Quality
+ Recall True  positives  /  (TP  +  FN)  on  default  prediction 
+Sklearn  classification  report
+ 
+≥  70% <  60%
+ 
+RAG  Quality
+ 
+Policy  retrieval  accuracy 
+%  of  applications  where  the  correct  loan-scheme  policy  is  retrieved 
+Manual  eval  test  scenarios
+ 
+≥  95% <  85%  →  spike  fails
+ 
+RAG  Quality
+ 
+Context  precision %  of  retrieved  policy  chunks  that  are  relevant  to  the  query 
+RAGAS  context  precision
+ 
+≥  85% <  70%
+ 
+RAG  Quality
+ 
+Context  recall %  of  relevant  policy  clauses  successfully  retrieved 
+RAGAS  context  recall
+ 
+≥  85% <  70%
+ 
+RAG  Quality
+ 
+Retrieval  failure  rate 
+%  of  requests  where  no  relevant  policy  context  is  retrieved 
+System  log  count
+ <  2% >  5%  →  ship  block
+ 
+Explanation
+ 
+Faithfulness Generated  explanation  grounded  in  retrieved  evidence  and  applicant  data 
+RAGAS  faithfulness  +  LLM  judge  rubric
+ 
+≥  90% <  75%
+ 
+Explanation
+ 
+Answer  relevancy Explanation  answers  underwriting  question  using  retrieved  evidence 
+RAGAS  answer  relevancy
+ 
+≥  90% <  75%
+ 
+Explanation
+ 
+Hallucination  rate %  of  explanations  containing  claims  unsupported  by  applicant  data  or  retrieved  policy 
+LLM  judge  +  human  spot-check
+ 
+<  1% >  3%  →  ship  block
+ 
+Fairness
+ Fairness  gap Approval  rate  delta  across  protected/proxy  demographic  segments 
+Equal  opportunity  difference  on  test  set
+ 
+≤  3  pp >  5  pp  →  HARD  BLOCK
+ 
+Fairness
+ Escalation  accuracy 
+%  of  high-risk  and  thin-file  applications  correctly  routed  to  human  review 
+Labelled  escalation  set
+ 
+≥  90% <  80%
+ 
+Operations
+ Policy  adherence %  of  recommendations  consistent  with  applicable  lending  policy  rules 
+Rule-based  policy  checker  +  LLM  judge
+ 
+100% <  98%  →  ship  block
+ 
+Operations
+ Cost  per  application 
+LLM  token  cost  +  embedding  cost  per  assessed  application 
+Gateway  token  log  aggregated  per  run
+ 
+<  $0.05 >  $0.08  →  guardrail
+ 
+Operations
+ P95  latency End-to-end  assessment  time  at  95th  percentile 
+Load  test  at  50  concurrent  requests
+ 
+≤  20  s >  30  s
+ 
+Operations
+ Audit  readiness %  of  decisions  with  complete  evidence  chain  stored  and  queryable 
+Audit  log  completeness  check
+ 
+100% <  99%  →  ship  block
+ 
+Capstone  Project  Page  
+6  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+Category KPI Definition How  measured Target Do-not-ship  floor 
+Business
+ Recommendation  acceptance  rate 
+%  of  copilot  recommendations  accepted  by  underwriters  without  substantive  edit 
+Pilot:  3  underwriters  ×  20  files
+ 
+≥  75% <  50%
+ 
+Business
+ Review  time  reduction 
+Reduction  in  average  underwriter  time  per  file  vs.  baseline  (45  min) 
+Time-on-task  measurement  in  pilot
+ 
+≥  50%  (≤  22  min) 
+<  20%  reduction
+ 
+Business
+ Human  override  rate 
+%  of  recommendations  rejected  or  substantively  edited  by  underwriters 
+Pilot  log
+ <  25% >  40%
+ 
+ 
+9    Risks  &  Initial  Mitigations 
+This  is  a  high-level  risk  identification  for  the  PRD  stage.  Risk Likelihood 
+Impact Mitigation  /  acceptance  criterion 
+★   Policy  RAG  miss  —  wrong  or  no  policy  clause  retrieved  for  the  decision  scenario 
+High
+ Critical
+ De-risk  spike  targets  this  assumption  in  Sprint  0.  Do-not-ship  floor:  retrieval  accuracy  <  85%. 
+Biased  ML  model  —  disparate  impact  on  thin-file  or  demographic  segments 
+High
+ Critical
+ Fairness  gap  guardrail  (>  5  pp)  is  a  hard  ship  block.  Segment-level  metrics  measured  every  sprint. 
+LLM  hallucinates  a  policy  rule  not  present  in  retrieved  context 
+Medium
+ Critical
+ Every  policy  claim  must  cite  a  retrieved  chunk  source  ID.  Hallucination  rate  floor:  >  3%  blocks  ship. 
+Over-automation  of  edge  cases  —  low-confidence  or  thin-file  applications  auto-decided 
+Medium
+ High
+ Hard  escalation  rule:  ML  confidence  <  0.6  or  thin-file  flag  →  human-review  path,  no  auto-decision. 
+Cost  blowout  —  LLM  context  grows  through  multi-step  workflow 
+Medium
+ Medium
+ Per-call  token  budget  enforced  at  gateway.  Cheap  model  tier  for  non-reasoning  steps.  Guardrail  >  $0.08  triggers  human  path. 
+Regulatory  mock  API  failure  causes  unresolved  verification 
+Low
+ High
+ Retry  policy  with  exponential  back-off;  fallback  to  secondary  mock;  human  escalation  if  unresolved.  Never  fabricate  response. 
+Inconsistent  policy  versioning  —  stale  policy  clauses  retrieved 
+Low
+ High
+ Policy  knowledge  base  versioned  and  dated.  Retrieval  returns  source  version  metadata  on  every  call.  ★   Policy  RAG  miss  is  the  riskiest  assumption. 
+ 
+10    Assumptions  &  Open  Questions 
+Capstone  Project  Page  
+7  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+  # Assumption Status Comment 
+A-1 Historical  repayment  outcomes  (ground-truth  labels)  are  available  in  the  chosen  dataset. 
+Confirmed 
+HC  2018  application_train.csv  contains  the  TARGET  column  fully  populated  across  all  307,511  rows  (0  =  repaid  on  time,  1  =  payment  difficulty).  Zero  missing  values.  Ground-truth  label  is  available  as-is  for  ML  training  and  held-out  evaluation. 
+A-2 A  synthetic  lending  policy  rulebook  exists  and  can  be  used  as  clean  text  for  RAG  indexing. 
+Confirmed 
+A  synthetic  lending  policy  rulebook  of  15–25  clauses  will  be  authored  for  the  pilot,  covering  DTI  thresholds,  income  minimums,  loan-to-income  limits,  thin-file  escalation  rules,  documentation  requirements,  and  fairness  guardrails.  This  corpus  is  the  RAG  retrieval  target  for  the  de-risk  spike  and  Sprint  1. 
+A-3 Human  underwriters  remain  the  final  decision  authority  —  no  autonomous  approve/decline  in  v1. 
+Confirmed 
+Explicitly  stated  in  the  capstone  brief  and  locked  in  PRD  Section  11  (Human-in-the-Loop  Policy).  The  system  generates  recommendations  only.  No  downstream  disbursement  or  loan  management  action  is  triggered  by  system  output. 
+A-4 Home  Credit  Default  Risk  2018  is  representative  enough  of  the  thin-file  borrower  population  for  pilot  experimentation. 
+Confirmed 
+HC  2018  was  built  explicitly  for  financial  inclusion  and  underbanked  borrower  populations,  directly  matching  Halcyon  Credit's  stated  problem.  Confirmed  as  primary  dataset  for  pilot  scope. Caveat:  Geographic  and  temporal  distribution  may  differ  from  Halcyon's  real  applicant  pool.  Real-world  deployment  requires  retraining  on  proprietary  data.  This  caveat  will  be  documented  in  the  dataset  card. 
+A-5 Bureau  data  is  available  as  structured  fields  —  no  unstructured  bureau  narrative  in  v1. Confirmed 
+HC  2018  bureau.csv  and  bureau_balance.csv  are  entirely  structured  —  credit  type,  outstanding  amounts,  days-past-due  history,  status  codes  (C/X/0–5),  and  monthly  balance  history.  No  unstructured  narrative  text  exists  in  either  bureau  table.  Mock  regulatory  API  calls  in  v1  will  return  structured  JSON  responses  consistent  with  this  schema. 
+A-6 Third-party  LLM  API  is  acceptable;  on-premise  inference  is  not  required  for  the  pilot. 
+Confirmed 
+Brief  permits  third-party  APIs  and  free  cloud  tiers  but  PII  masking  layer  is  required 
+A-7 Pilot  load  target  is  50  concurrent  requests;  peak  production  volume  is  assumed  at  <  200  applications  per  hour. 
+Assumed 
+Halcyon  Credit  is  fictional  —  no  real  volume  data  is  available.  The  <  200  applications  per  hour  figure  and  50  concurrent  requests  load  test  target  are  design  parameters  chosen  for  the  pilot. 
+A-8a 
+Protected  and  proxy  demographic  attributes  required  for  fairness  monitoring  are  present  in  the  dataset. 
+Confirmed 
+HC  2018  contains  the  following  attributes  confirmed  in  the  dataset  schema:  CODE_GENDER  (M/F/XNA),  NAME_EDUCATION_TYPE  (5  levels),  NAME_FAMILY_STATUS  (6  values),  DAYS_BIRTH  (age  proxy),  REGION_RATING_CLIENT  (socioeconomic  proxy).  Fairness  evaluation  across  these  segments  is  fully  supported  without  additional  data  collection. 
+A-8b 
+CODE_GENDER  and  age  (DAYS_BIRTH)  are  excluded  from  ML  training  features  and  retained  
+Open  —  confirm  before  Sprint  1 
+CODE_GENDER_M  has  a  positive  correlation  with  default  (r  =  0.054)  in  HC  2018.  Including  it  as  an  ML  training  feature  may  constitute  direct  discrimination.  Design  intent  is  to  exclude  CODE_GENDER  and  
+Capstone  Project  Page  
+8  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+# Assumption Status Comment 
+exclusively  for  fairness  monitoring. 
+DAYS_BIRTH  from  ML  features  entirely  and  retain  them  only  for  fairness  audit  and  segment-level  evaluation.  This  must  be  confirmed  as  the  agreed  approach  before  Sprint  1  feature  engineering  begins. Note:  Proxy  leakage  through  correlated  features  (OCCUPATION_TYPE,  REGION_RATING_CLIENT)  must  also  be  assessed  in  the  fairness  audit  sprint. 
+A-9 Lending  policy  rulebook  update  cadence  is  monthly  or  slower;  re-indexing  is  triggered  manually  on  document  change  in  v1. 
+Assumed 
+Since  Halcyon  Credit  is  fictional  and  the  policy  corpus  is  authored  synthetically,  update  cadence  is  a  design  decision.  Assumed  cadence  for  pilot:  monthly.  Re-index  of  the  Chroma  vector  store  is  triggered  manually 
+ 
+11    Human-in-the-Loop  Policy 
+The  system  may  recommend,  explain,  verify,  and  escalate.  It  may  not  autonomously  approve  or  decline  a  
+loan
+ 
+application.
+ 
+Final
+ 
+authority
+ 
+rests
+ 
+with
+ 
+a
+ 
+licensed
+ 
+human
+ 
+underwriter.  
+Mandatory  escalation  triggers •  ML  model  confidence  score  <  0.60  or  thin-file  flag  raised •  Missing  or  conflicting  applicant  documents  that  cannot  be  resolved  automatically •  Any  policy  rule  violation  or  policy  conflict •  Regulatory  verification  failure  after  retry  policy  exhausted •  Fairness  alert  raised  on  the  decision •  Any  sub-component  failure  (ML,  RAG,  document  verification,  regulatory  check)  KILL  SWITCH   If  any  guardrail  metric  is  breached,  or  if  the  system  cannot  produce  a  complete  evidence  chain,  it  
+must
+ 
+immediately
+ 
+degrade
+ 
+to
+ 
+the
+ 
+human-review
+ 
+path
+ 
+and
+ 
+raise
+ 
+an
+ 
+operational
+ 
+alert.
+ 
+It
+ 
+must
+ 
+never
+ 
+guess,
+ 
+fabricate,
+ 
+or
+ 
+auto-decide. 
+ 
+12    Acceptance  Criteria 
+The  project  is  accepted  when  all  of  the  following  are  satisfied  in  the  final  Sprint  4  evaluation:  ID Acceptance  criterion 
+AC-1 
+End-to-end  underwriting  workflow  (ingestion  →  risk  score  →  policy  check  →  fairness  audit  →  recommendation  →  audit  log)  completes  without  error  on  test  cases. 
+AC-2 
+ML  model  AUC  ≥  0.80  on  held-out  test  set.  F1  ≥  0.72. 
+AC-3 
+Policy  retrieval  accuracy  ≥  95%  across  all  supported  loan  schemes. 
+AC-4 
+Policy  adherence  reaches  100%  —  no  recommendation  violates  a  stated  lending  rule. 
+Capstone  Project  Page  
+9  
+HALCYON  CREDIT   ·   Agentic  Underwriting  Copilot   ·   PRD  v1.0 CONFIDENTIAL   ·   Sprint  0
+ 
+ID Acceptance  criterion 
+AC-5 
+Fairness  gap  ≤  5  pp  across  demographic  segments  on  test  set  (hard  block  if  exceeded). 
+AC-6 
+Every  recommendation  contains  a  complete  evidence  chain:  risk  factors,  policy  clause  citations,  regulatory  check  results,  document  findings. 
+AC-7 
+Hallucination  rate  <  1%  measured  by  LLM  judge  on  held-out  explanation  set. 
+AC-8 
+Cost  per  assessed  application  <  $0.05  under  representative  load. 
+AC-9 
+P95  end-to-end  latency  ≤  20  s  at  50  concurrent  requests. 
+AC-10 
+Human  underwriter  can  audit  every  recommendation  from  stored  artefacts  alone  (audit  readiness  =  100%). 
+AC-11 
+Recommendation  acceptance  rate  ≥  75%  in  underwriter  pilot  (3  underwriters  ×  20  files). 
+ 
+End  of  PRD  v2.0   ·   Halcyon  Credit  Agentic  Underwriting  Copilot   ·   Futurense  AI  Clinic  Capstone  Project  02
+ 
+Capstone  Project  Page  
+10  

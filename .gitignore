@@ -229,3 +229,10 @@ rejects/
 
 # Data
 data/**/*.csv
+
+# Machine Learning model binaries
+models/**/*.pkl
+models/**/*.joblib
+
+# ML visualization plots
+reports/ml/**/*.png

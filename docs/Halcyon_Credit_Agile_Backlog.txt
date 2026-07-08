@@ -1,0 +1,1384 @@
+Halcyon Credit — Agile Backlog & Sprint Plan
+Agentic Underwriting Copilot  ·  PRD v2.0  ·  Sprint 0 → Sprint 4
+
+1. Project Overview
+Halcyon Credit is a digital consumer lender serving applicants with thin or non-traditional credit histories. The PRD specifies a human-in-the-loop Agentic Underwriting Copilot that:
+Assembles application facts from upstream systems
+Predicts repayment risk via a trained ML model
+Evaluates compliance against the applicable loan-scheme policy using a RAG engine
+Verifies documents and regulatory signals
+Audits decisions for fairness
+Produces an evidence-backed Approve / Decline / Refer recommendation
+The system recommends, it does not decide. Final authority remains with a licensed human underwriter.
+Primary success outcomes (from PRD §2 & §8):
+Outcome
+Baseline
+Target
+Avg review time per file
+~45 min
+≤ 22 min (≥ 50% reduction)
+Decision consistency on matched profiles
+inconsistent
+≥ 95%
+Audit readiness
+ad-hoc
+100%
+Unit cost / application
+manual
+< $0.05
+Decision quality (AUC)
+n/a
+≥ 0.80
+Fairness gap
+n/a
+≤ 3 pp (hard block > 5 pp)
+2. Functional Scope
+In scope (PRD §5):
+Probability-of-default prediction (supervised ML on structured data)
+Multi-scheme policy evaluation: Personal, Education, Vehicle, Business, First-Time Borrower, Low-Income
+RAG policy engine grounding every recommendation in retrieved clauses
+Policy version management; scheme-aware recommendations
+Fairness monitoring across protected & proxy demographic segments
+Evidence-backed recommendation (Approve / Decline / Refer)
+Human-in-the-loop workflow with defined escalation triggers
+Immutable audit logging (inputs, outputs, policy checks, fairness, recommendation)
+Retrieval quality monitoring (context precision, recall, faithfulness)
+Underwriter productivity & cost-per-application monitoring
+Out of scope (PRD §5):
+Autonomous approve/decline
+Live bureau / KYC integrations (mocked in v1)
+Production-grade deployment / regulatory licensing
+Applicant-facing portal
+Fraud detection beyond dataset signals
+Multi-jurisdiction legal compliance beyond simulated corpus
+LGD / EAD modelling (future V2)
+Functional requirements summary (PRD §6):
+ID
+Requirement
+Outputs
+FR-1
+Application Ingestion
+Normalised applicant profile
+FR-2
+Credit Risk Prediction (ML)
+Risk score, band, top contributor features
+FR-3
+Multi-Scheme Policy Evaluation
+Applicable policy set, passed/failed rules, escalation
+FR-4
+Policy Retrieval Engine (RAG)
+Retrieved passages, confidence, source attribution
+FR-5
+Document Verification
+Verification & consistency findings, missing info
+FR-6
+Regulatory Validation
+Verification status, compliance findings, escalation
+FR-7
+Fairness Audit
+Fairness indicators, bias alerts, segment deltas
+FR-8
+Recommendation Generation
+Recommendation + evidence chain + escalation flag
+FR-9
+Explanation Generation
+Narrative explanation + policy refs + factors
+FR-10
+Audit Logging
+Immutable decision record
+FR-11
+Human-in-the-Loop Workflow
+Escalation record, reason code, queue entry
+3. Non-Functional Requirements
+Dimension
+Requirement
+Latency
+Median ≤ 10 s, P95 ≤ 20 s; ML inference ≤ 300 ms; RAG retrieval ≤ 600 ms
+Availability
+≥ 99% uptime during pilot
+Cost ceiling
+< $0.05 per application; guardrail > $0.08 triggers human fallback
+Data privacy
+No raw PII in LLM prompts; SSN/DOB/account redacted; aggregated features only
+Explainability
+Every recommendation carries an evidence chain (data refs, SHAP, policy clauses + source IDs, regulatory result, fairness result)
+Audit trail
+Immutable, queryable; full reasoning reconstructable from stored artefacts
+Human fallback
+Any sub-component failure (ML/RAG/Doc/Regulatory) → human path. Never auto-decide on failed component
+Security
+API keys in secrets manager; least-privilege tool access; audit log on external calls
+4. Assumptions
+#
+Assumption
+Status
+A-1
+Ground-truth TARGET labels available in HC 2018 (307,511 rows)
+Confirmed
+A-2
+Synthetic 15–25 clause policy rulebook is the RAG corpus
+Confirmed
+A-3
+Humans remain final decision authority — no autonomous decide in v1
+Confirmed
+A-4
+HC 2018 dataset is representative of thin-file population
+Confirmed (caveat documented)
+A-5
+Bureau data is structured; no unstructured narrative in v1
+Confirmed
+A-6
+Third-party LLM API acceptable; PII masking layer required
+Confirmed
+A-7
+Load: 50 concurrent requests; < 200 apps/hr peak
+Assumed (design parameter)
+A-8a
+Protected/proxy attributes present (GENDER, AGE, EDUCATION, FAMILY_STATUS, REGION_RATING)
+Confirmed
+A-8b
+CODE_GENDER and DAYS_BIRTH excluded from ML features; retained only for fairness audit
+Open — confirm before Sprint 1
+A-9
+Policy rulebook update cadence monthly; manual re-index on change
+Assumed
+5. Epics
+Epic ID
+Epic Name
+PRD Coverage
+EPIC-01
+Application Ingestion & Data Pipeline
+FR-1, A-1, A-4, A-5
+EPIC-02
+ML Risk Prediction Engine
+FR-2, AC-2, A-8b
+EPIC-03
+RAG Policy Retrieval Engine
+FR-4, AC-3, A-2, A-9
+EPIC-04
+Multi-Scheme Policy Evaluation
+FR-3, AC-4
+EPIC-05
+Document Verification
+FR-5
+EPIC-06
+Regulatory Validation (Mock APIs)
+FR-6
+EPIC-07
+Fairness Audit
+FR-7, AC-5, A-8a, A-8b
+EPIC-08
+Recommendation Generation
+FR-8, AC-6
+EPIC-09
+Explanation Generation
+FR-9, AC-7
+EPIC-10
+Audit Logging & Traceability
+FR-10, AC-10
+EPIC-11
+Human-in-the-Loop Workflow & Escalation
+FR-11, PRD §11
+EPIC-12
+Underwriter UI / Copilot Workspace
+NFR-Explainability, AC-11
+EPIC-13
+Observability, Cost & Ops Monitoring
+NFR-Latency/Cost, AC-8/AC-9
+EPIC-14
+Security, Privacy & PII Handling
+NFR-Privacy, NFR-Security
+EPIC-15
+Platform, Infrastructure & DevOps
+NFR-Availability, Release Plan
+6. Sprint 0 — Discovery, Planning & De-Risking (No feature development)
+Sprint Goal: Establish complete shared understanding of the PRD, validate the riskiest assumption (policy RAG), define architecture, contracts, DoR/DoD, and produce a ready-to-execute backlog.
+Duration: 1 week   Story Points: 34
+US-001 — Functional Requirement Gathering Workshop
+Epic: EPIC-15 Platform / Discovery
+User Story: As a Product Owner, I want to run a functional requirements workshop with all stakeholders, so that every FR (FR-1…FR-11) is unambiguously understood and signed off.
+Acceptance Criteria:
+Given the PRD v2.0 is shared in advance, When the workshop concludes, Then each of FR-1…FR-11 has a written, agreed interpretation captured.
+Given ambiguities are raised, When the workshop ends, Then every ambiguity is logged in an open-questions register with an owner and due date.
+Priority: High
+Story Points: 3
+Dependencies: None
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-002 — Business Requirement Analysis & Success-Metric Alignment
+Epic: EPIC-15
+User Story: As a Business Analyst, I want to translate PRD §2 problem statements and §8 KPIs into measurable acceptance metrics per epic, so that delivery teams know exactly what "done" means at the business level.
+Acceptance Criteria:
+Given PRD §8 KPIs and AC-1…AC-11, When analysis completes, Then every KPI has a measurement method, target, and do-not-ship floor recorded.
+Given the North Star metric (Business Decision Utility Score), When weights are proposed, Then they are reviewed and approved by the Product Owner.
+Priority: High
+Story Points: 3
+Dependencies: US-001
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-003 — Stakeholder Discussions (Underwriter / Compliance / Ops)
+Epic: EPIC-12
+User Story: As a Product Owner, I want to interview the three primary personas (Underwriter, Compliance Officer, Ops Manager) per PRD §4, so that user flows reflect real workflows.
+Acceptance Criteria:
+Given persona JTBDs from PRD §4, When interviews complete, Then each persona has at least one validated user journey document.
+Given journey drafts, When stakeholders review, Then sign-off is recorded for every persona.
+Priority: High
+Story Points: 3
+Dependencies: US-001
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-004 — PRD Review & Validation
+Epic: EPIC-15
+User Story: As a Scrum Master, I want a structured PRD review session, so that the team formally validates scope, NFRs, and acceptance criteria before Sprint 1.
+Acceptance Criteria:
+Given PRD v2.0 §§1–12, When review concludes, Then a sign-off record is captured with named approvers from Product, Eng, Compliance, Data Science.
+Given any change request, When raised, Then it enters change-control with an impact note.
+Priority: High
+Story Points: 2
+Dependencies: US-001, US-002
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-005 — Requirement Clarification & Open-Question Closure
+Epic: EPIC-15
+User Story: As a Business Analyst, I want to close every Open question in PRD §10 (notably A-8b on CODE_GENDER/DAYS_BIRTH exclusion), so that Sprint 1 feature engineering can start without ambiguity.
+Acceptance Criteria:
+Given A-8b is Open, When Sprint 0 closes, Then exclusion of CODE_GENDER and DAYS_BIRTH from ML features is confirmed in writing.
+Given proxy leakage risk (OCCUPATION_TYPE, REGION_RATING_CLIENT), When review completes, Then a mitigation note is recorded for the fairness sprint.
+Priority: High
+Story Points: 2
+Dependencies: US-001
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-006 — End-to-End User Flow Definition
+Epic: EPIC-12
+User Story: As a UX lead, I want to define the end-to-end underwriter copilot flow (Queue → Open file → Risk → Policy → Documents → Regulatory → Fairness → Recommendation → Action), so that UI design and API contracts share one source of truth.
+Acceptance Criteria:
+Given PRD §4.1 JTBD, When the flow is drafted, Then every screen state maps to one FR.
+Given escalation triggers (§11), When flows are reviewed, Then the escalation path is explicitly modelled.
+Priority: High
+Story Points: 3
+Dependencies: US-003
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-007 — Wireframe / Mockup Planning
+Epic: EPIC-12
+User Story: As a UX designer, I want low-fidelity wireframes for the underwriter workspace, so that Sprint 1 can build a basic UI against a shared visual.
+Acceptance Criteria:
+Given approved user flow (US-006), When wireframes are produced, Then at least 4 key screens exist: Queue, Application Detail, Evidence Panel, Decision Action.
+Given wireframes, When reviewed with underwriters, Then feedback is incorporated and version-locked for Sprint 1.
+Priority: Medium
+Story Points: 3
+Dependencies: US-006
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-008 — Technical Feasibility Analysis (LLM, RAG, ML, Cost)
+Epic: EPIC-15
+User Story: As a Tech Lead, I want to validate that target NFRs (latency ≤ 20 s P95, cost < $0.05/app, retrieval accuracy ≥ 95%) are achievable with chosen stack, so that we do not enter Sprint 1 with infeasible commitments.
+Acceptance Criteria:
+Given candidate LLMs and embedding models, When a back-of-envelope cost model is built, Then projected cost/app < $0.08 (guardrail).
+Given P95 latency budgets, When component budgets are summed, Then they total ≤ 20 s with headroom.
+Priority: High
+Story Points: 3
+Dependencies: US-002
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-009 — High-Level Architecture Discussion & Document
+Epic: EPIC-15
+User Story: As an Architect, I want a documented high-level architecture, so that all sub-teams (ML, RAG, App, Ops) align on boundaries and contracts.
+Acceptance Criteria:
+Given FR-1…FR-11, When the architecture diagram is drafted, Then every FR is mapped to a service / module.
+Given the kill-switch & human-fallback requirement, When the diagram is reviewed, Then fallback paths are explicit on every external dependency.
+Priority: High
+Story Points: 3
+Dependencies: US-008
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-010 — Database Design Planning (Decision Record, Audit, Policy Versions)
+Epic: EPIC-10
+User Story: As a Data Engineer, I want logical schemas for application, decision_record, audit_event, policy_corpus_version, and escalation_queue tables, so that Sprint 1 can implement persistence without rework.
+Acceptance Criteria:
+Given FR-10 audit fields, When the schema is designed, Then every field in the FR-10 outputs list has a column.
+Given A-9 versioning, When policy schema is designed, Then version & effective-date columns exist.
+Priority: High
+Story Points: 3
+Dependencies: US-009
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-011 — API Contract Definition (OpenAPI for Copilot endpoints)
+Epic: EPIC-15
+User Story: As an API designer, I want OpenAPI contracts for /applications, /assess, /recommendation, /escalate, /audit, so that backend and UI can develop in parallel.
+Acceptance Criteria:
+Given the user flow (US-006), When the spec is published, Then each endpoint has request/response schemas validated by both UI and backend leads.
+Given PII rules (NFR), When schemas are reviewed, Then no raw PII fields appear in any LLM-bound payload.
+Priority: High
+Story Points: 3
+Dependencies: US-009
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-012 — Risk Identification & Mitigation Plan
+Epic: EPIC-15
+User Story: As a Delivery Manager, I want PRD §9 risks expanded into a sprint-tracked register with owners, so that mitigations are actively executed and not forgotten.
+Acceptance Criteria:
+Given PRD §9 risks, When the register is created, Then every risk has owner, mitigation, trigger condition, and target sprint for mitigation.
+Given the Policy RAG miss risk, When Sprint 0 ends, Then a de-risk spike plan exists for Sprint 0/early Sprint 1.
+Priority: High
+Story Points: 2
+Dependencies: US-002
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-013 — Backlog Creation (Epics → Stories → Sprint mapping)
+Epic: EPIC-15
+User Story: As a Product Owner, I want a complete prioritised product backlog covering every FR, NFR, and Acceptance Criterion in the PRD, so that Sprint 1+ can start with no gaps.
+Acceptance Criteria:
+Given PRD FR-1…FR-11 and AC-1…AC-11, When the backlog is built, Then every item maps to at least 1 story (traceability matrix produced).
+Given Fibonacci estimation, When sizing is complete, Then every story has points and priority.
+Priority: High
+Story Points: 3
+Dependencies: US-001 to US-012
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-014 — Sprint Planning & Capacity Calibration
+Epic: EPIC-15
+User Story: As a Scrum Master, I want to plan Sprints 1–4 with the team, so that each sprint has a clear goal, committed scope, and acknowledged dependencies.
+Acceptance Criteria:
+Given the backlog (US-013), When planning ends, Then Sprints 1–4 each have a goal, story list, and risk/dependency notes.
+Given team capacity, When committed velocity is set, Then total committed points per sprint do not exceed agreed capacity.
+Priority: High
+Story Points: 2
+Dependencies: US-013
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-015 — Definition of Done (DoD) & Definition of Ready (DoR)
+Epic: EPIC-15
+User Story: As a Scrum Master, I want a written DoD and DoR ratified by the team, so that quality gates and entry criteria are non-negotiable.
+Acceptance Criteria:
+Given team review, When the DoD is published, Then it includes: code complete, code reviewed, unit tested, integration tested, AC met, docs updated, ready for demo.
+Given DoR review, When published, Then it includes: AC defined, dependencies known, estimated, testable, no open blockers.
+Priority: High
+Story Points: 1
+Dependencies: None
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+Sprint Deliverables: Signed-off PRD interpretation, persona journeys, wireframes, HL architecture, DB design, OpenAPI contracts, risk register, prioritised backlog, Sprint 1–4 plan, DoR/DoD, closed open questions (esp. A-8b).
+Sprint Risks: Stakeholder unavailability; ambiguous PRD clauses; A-8b remaining open.
+7. Sprint 1 — Proof of Concept (End-to-End Thin Slice)
+Sprint Goal: Deliver a working end-to-end Proof of Concept by the end of the week that validates the core business workflow.
+Duration: 1 week   Story Points: 39
+Features: FR-1 (basic), FR-2 (baseline), FR-4 (single scheme), FR-6 (stub), FR-8 (POC), FR-10 (basic)
+Expected Demo: A loan officer logs into the copilot UI, picks an application from a seeded queue, clicks Assess; within ≤ 30 s the UI shows risk score, one retrieved policy clause, and an evidence-backed recommendation; the audit record is queryable.
+US-101 — Auth (Basic) for Underwriter Access
+Epic: EPIC-14 / EPIC-12
+User Story: As an underwriter, I want to log in with username and password, so that only authorised users can access applications.
+Acceptance Criteria:
+Given valid credentials, When I log in, Then I see the application queue.
+Given invalid credentials, When I attempt login, Then access is denied with a clear error and the attempt is logged.
+Priority: High
+Story Points: 3
+Dependencies: US-011
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-102 — Basic Application Ingestion (CSV → Normalised Profile)
+Epic: EPIC-01 (FR-1)
+User Story: As a system, I want to load one HC-2018 application row into a normalised applicant profile, so that downstream services have consistent input.
+Acceptance Criteria:
+Given a sample CSV, When ingestion runs, Then the normalised profile is persisted and retrievable via /applications/{id}.
+Given missing required fields, When ingestion runs, Then the application is flagged INCOMPLETE without crashing.
+Priority: High
+Story Points: 3
+Dependencies: US-010, US-011
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-103 — Baseline ML Risk Score (Single Endpoint)
+Epic: EPIC-02 (FR-2)
+User Story: As a system, I want a baseline logistic-regression model serving a risk score for any normalised profile, so that POC has a real ML signal (not stubbed).
+Acceptance Criteria:
+Given a normalised profile, When /score is called, Then a probability in [0,1] and a band (Low/Med/High) are returned in ≤ 300 ms.
+Given CODE_GENDER and DAYS_BIRTH, When scoring runs, Then these features are NOT used as predictors (A-8b).
+Priority: High
+Story Points: 5
+Dependencies: US-102, US-005
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-104 — Minimal Policy Corpus Authored (5 Clauses)
+Epic: EPIC-03 (FR-4, A-2)
+User Story: As a Compliance SME, I want a 5-clause Personal Loan policy authored, so that RAG has a real corpus to retrieve from in the POC.
+Acceptance Criteria:
+Given the corpus draft, When reviewed, Then clauses include DTI threshold, income minimum, LTI cap, thin-file rule, and fairness guardrail.
+Given the corpus, When committed, Then version v0.1 and an effective date are recorded.
+Priority: High
+Story Points: 2
+Dependencies: US-005
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-105 — RAG Retrieval Engine (Single-Scheme POC)
+Epic: EPIC-03 (FR-4)
+User Story: As a system, I want to retrieve the top-k Personal-Loan policy clauses for an application context, so that recommendations are grounded.
+Acceptance Criteria:
+Given an application context, When /policy/retrieve is called, Then ≥ 1 relevant clause with source ID is returned in ≤ 600 ms.
+Given an empty retrieval, When the system responds, Then it flags retrieval_failed (no recommendation generated).
+Priority: High
+Story Points: 5
+Dependencies: US-104
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-106 — POC Recommendation Generation
+Epic: EPIC-08 (FR-8)
+User Story: As an underwriter, I want a single recommendation (Approve / Decline / Refer) backed by risk score + 1 retrieved clause, so that I can review an end-to-end output.
+Acceptance Criteria:
+Given risk score + retrieved clause, When /assess is called, Then the response contains recommendation + evidence chain + escalation flag.
+Given any missing input (score or clause), When /assess runs, Then recommendation is forced to Refer (kill-switch behaviour).
+Priority: High
+Story Points: 5
+Dependencies: US-103, US-105
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-107 — Basic Underwriter UI (Queue + Detail + Decision)
+Epic: EPIC-12
+User Story: As an underwriter, I want a minimal web UI to view a queue, open an application, click Assess, and see the recommendation, so that the POC can be demoed end-to-end.
+Acceptance Criteria:
+Given I am logged in, When I open the queue, Then I see ≥ 1 application.
+Given I open an application, When I click Assess, Then within ≤ 30 s I see risk, clause, recommendation, and an accept/override button.
+Priority: High
+Story Points: 5
+Dependencies: US-101, US-106
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-108 — POC Audit Record Persistence
+Epic: EPIC-10 (FR-10)
+User Story: As a Compliance Officer, I want every POC assessment to write a decision record (inputs, score, clause, recommendation, timestamp, underwriter action), so that traceability is demonstrated from day one.
+Acceptance Criteria:
+Given an assessment runs, When it completes, Then a row in decision_record exists with all required fields.
+Given an underwriter override, When saved, Then the override and reason are appended to the same record.
+Priority: High
+Story Points: 3
+Dependencies: US-106, US-107, US-010
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-109 — Basic API Integration: Mock Regulatory Stub
+Epic: EPIC-06 (FR-6, partial)
+User Story: As a system, I want a mock regulatory verification stub that returns deterministic PASS/FAIL, so that POC demonstrates an external integration path even if behaviour is stubbed.
+Acceptance Criteria:
+Given an application ID, When /regulatory/verify is called, Then the response is PASS or FAIL within ≤ 500 ms.
+Given a stub failure, When retried, Then the system surfaces escalate_for_review rather than fabricating a result.
+Priority: Medium
+Story Points: 3
+Dependencies: US-011
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-110 — POC Demo Script & Recorded Walkthrough
+Epic: EPIC-15
+User Story: As a Product Owner, I want a scripted demo and recorded walkthrough, so that stakeholders can validate POC value.
+Acceptance Criteria:
+Given the POC, When the demo is run, Then the queue → assess → evidence → decision → audit log path is shown without error.
+Given the demo, When stakeholders review, Then a feedback log is captured.
+Priority: High
+Story Points: 2
+Dependencies: US-107, US-108
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-111 — Spike: Policy RAG Retrieval Accuracy (riskiest assumption)
+Epic: EPIC-03
+User Story: As a Data Scientist, I want to evaluate retrieval accuracy on a 30-scenario manual eval set, so that we de-risk the RAG miss assumption (PRD §9).
+Acceptance Criteria:
+Given 30 labelled scenarios, When retrieval is evaluated, Then accuracy is reported with a ≥ 85% pass threshold (do-not-ship floor).
+Given failures, When analysed, Then failure modes are categorised and an improvement plan exists for Sprint 2.
+Priority: High
+Story Points: 3
+Dependencies: US-105
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+Sprint Deliverables: Running POC URL, sample queue, end-to-end assess flow with 1-scheme RAG, baseline ML, audit record, mock regulatory, demo recording, RAG spike report.
+Sprint Risks: Policy RAG miss; latency at first integration; PII leakage through prompts.
+8. Sprint 2 — Multi-Scheme Policy, ML Hardening, Explainability
+Sprint Goal: Make the recommendation production-credible: full multi-scheme policy evaluation, hardened ML with SHAP explainability, and grounded explanation generation.
+Duration: 2 weeks   Story Points: 47
+Features: FR-2 (hardened), FR-3, FR-4 (multi-scheme), FR-9
+US-201 — Production-Grade ML Model Training & AUC ≥ 0.80
+Epic: EPIC-02 (FR-2, AC-2)
+User Story: As a Data Scientist, I want a trained gradient-boosted model on HC 2018 with AUC ≥ 0.80, so that the copilot meets ML quality acceptance criteria.
+Acceptance Criteria:
+Given a held-out test set, When evaluated, Then AUC ≥ 0.80 and F1 ≥ 0.72.
+Given the feature set, When inspected, Then CODE_GENDER and DAYS_BIRTH are absent.
+Priority: High
+Story Points: 8
+Dependencies: US-103, US-005
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-202 — SHAP Top-Contributor Features per Score
+Epic: EPIC-02 (FR-2)
+User Story: As an underwriter, I want the top 5 SHAP contributor features for each risk score, so that I can understand why an applicant scored as they did.
+Acceptance Criteria:
+Given any score, When SHAP is computed, Then top 5 features with directional values are returned.
+Given SHAP output, When rendered in UI, Then each feature has a human-readable label.
+Priority: High
+Story Points: 5
+Dependencies: US-201
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-203 — Policy Corpus Authoring: 6 Loan Schemes (15–25 clauses)
+Epic: EPIC-03 (A-2)
+User Story: As a Compliance SME, I want a complete 15–25 clause synthetic rulebook covering all 6 schemes, so that RAG can serve every supported product.
+Acceptance Criteria:
+Given the schemes (Personal, Education, Vehicle, Business, First-Time, Low-Income), When the corpus is published as v1.0, Then each scheme has ≥ 2 clauses.
+Given version control, When the corpus is committed, Then version + effective date metadata exist.
+Priority: High
+Story Points: 5
+Dependencies: US-104
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-204 — Multi-Scheme RAG Retrieval with Source Attribution
+Epic: EPIC-03 (FR-4, AC-3)
+User Story: As a system, I want scheme-aware retrieval with source IDs returned for every clause, so that explanations are auditable.
+Acceptance Criteria:
+Given a scheme tag, When retrieval runs, Then only that scheme clauses are candidates.
+Given a retrieved clause, When returned, Then a source_id and version field are populated.
+Priority: High
+Story Points: 5
+Dependencies: US-203, US-105
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-205 — Retrieval Quality Monitoring (Context Precision/Recall)
+Epic: EPIC-13 / EPIC-03
+User Story: As an Ops Manager, I want continuous retrieval-quality metrics (context precision, recall, failure rate), so that quality degradation is detected fast.
+Acceptance Criteria:
+Given a daily eval job, When it runs, Then RAGAS context precision ≥ 0.85 and recall ≥ 0.85 are reported.
+Given retrieval failure rate, When measured, Then an alert fires when > 5%.
+Priority: High
+Story Points: 5
+Dependencies: US-204
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-206 — Multi-Scheme Policy Evaluation Engine (FR-3)
+Epic: EPIC-04 (FR-3, AC-4)
+User Story: As a system, I want a rule evaluator that applies retrieved clauses to the application and returns passed/failed rules, so that the recommendation has a defensible logical layer.
+Acceptance Criteria:
+Given retrieved clauses + application data, When evaluation runs, Then the response lists passed rules, failed rules, and escalation requirements.
+Given any failed rule, When present, Then the recommendation may not be Approve (policy adherence = 100%).
+Priority: High
+Story Points: 8
+Dependencies: US-204
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-207 — Policy Version Management & Re-Index Trigger
+Epic: EPIC-03 (A-9)
+User Story: As a Compliance Officer, I want every retrieved clause stamped with corpus version, and a manual re-index button when the corpus changes, so that versioning is auditable.
+Acceptance Criteria:
+Given a new corpus version, When re-index is triggered, Then the new version becomes active and old retrievals can be replayed against the old version.
+Given any decision record, When inspected, Then policy version is stored alongside each clause used.
+Priority: Medium
+Story Points: 3
+Dependencies: US-203
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-208 — Explanation Generation with Grounded Citations (FR-9)
+Epic: EPIC-09 (FR-9, AC-7)
+User Story: As an underwriter, I want a narrative explanation that cites applicant data, SHAP factors, and policy clause IDs, so that I can defend the decision.
+Acceptance Criteria:
+Given all evidence, When the explanation is generated, Then every factual claim is traceable to a source ID or applicant field.
+Given an LLM-judge eval, When run on 50 explanations, Then hallucination rate < 1%.
+Priority: High
+Story Points: 5
+Dependencies: US-202, US-206
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-209 — PII Redaction Layer Before LLM Calls
+Epic: EPIC-14 (NFR-Privacy)
+User Story: As a Security Officer, I want SSN/DOB/account numbers redacted from every LLM prompt, so that no raw PII leaves the trust boundary.
+Acceptance Criteria:
+Given any LLM call, When the prompt is inspected, Then PII patterns are absent.
+Given an attempted leak, When detected by the linter, Then the call is blocked and logged.
+Priority: High
+Story Points: 3
+Dependencies: US-011
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+Sprint Deliverables: AUC ≥ 0.80 model + SHAP, multi-scheme corpus v1.0, scheme-aware RAG, rule evaluator, explanation generator, PII redactor, retrieval-quality dashboards.
+Sprint Risks: LLM hallucination, proxy leakage in features, corpus inconsistency.
+9. Sprint 3 — Document Verification, Regulatory Validation, Fairness Audit
+Sprint Goal: Complete the evidence chain — verify documents, validate against mock regulatory services, and audit every decision for fairness with hard-block enforcement.
+Duration: 2 weeks   Story Points: 47
+Features: FR-5, FR-6, FR-7, FR-11 (escalation)
+US-301 — Document Upload & Storage
+Epic: EPIC-05 (FR-5)
+User Story: As an underwriter, I want to upload salary slips, bank statements, employment letters, ID/address proofs, and explanation letters, so that the system can verify them.
+Acceptance Criteria:
+Given a supported file type, When uploaded, Then the file is stored and linked to the application.
+Given an unsupported type, When uploaded, Then an error is shown.
+Priority: High
+Story Points: 3
+Dependencies: US-107
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-302 — Document Verification: Completeness & Consistency Checks
+Epic: EPIC-05 (FR-5)
+User Story: As a system, I want to verify completeness (required docs present) and consistency (name/income agree across documents), so that fraud signals and missing-info gaps are flagged.
+Acceptance Criteria:
+Given the required-docs list for a scheme, When verification runs, Then missing docs produce a missing_information report.
+Given name/income mismatch across docs, When detected, Then a consistency finding is raised.
+Priority: High
+Story Points: 8
+Dependencies: US-301
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-303 — Regulatory Validation (Mock Identity / Employment / Tax / Sanctions)
+Epic: EPIC-06 (FR-6)
+User Story: As a system, I want to call mock regulatory APIs for identity, employment, tax, and sanctions, with retry + escalation, so that every recommendation has a regulatory verdict without fabricated responses.
+Acceptance Criteria:
+Given a transient mock error, When retried with exponential back-off, Then the call succeeds or escalates after policy-defined retries.
+Given retries exhausted, When unresolved, Then the application is escalated; the system never fabricates a result.
+Priority: High
+Story Points: 8
+Dependencies: US-109
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-304 — Fairness Audit: Segment-Level Approval-Rate Delta (FR-7)
+Epic: EPIC-07 (FR-7, AC-5)
+User Story: As a Compliance Officer, I want every decision evaluated against demographic segments (CODE_GENDER, age band, education, family status, region rating), so that fairness gaps are detected per decision and across the portfolio.
+Acceptance Criteria:
+Given decision history, When the fairness job runs, Then segment-level approval-rate deltas are computed.
+Given a gap > 5 pp, When detected, Then a hard-block alert is raised and the affected scheme is paused pending review.
+Priority: High
+Story Points: 8
+Dependencies: US-206
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-305 — Proxy Leakage Assessment (OCCUPATION_TYPE, REGION_RATING_CLIENT)
+Epic: EPIC-07 (A-8b note)
+User Story: As a Data Scientist, I want to quantify proxy leakage in retained features, so that fairness audits account for indirect discrimination.
+Acceptance Criteria:
+Given the trained model, When correlation between proxy features and CODE_GENDER/age is measured, Then a report is produced.
+Given material leakage, When identified, Then mitigations are documented for Sprint 4.
+Priority: Medium
+Story Points: 3
+Dependencies: US-201, US-304
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-306 — Full Human-in-the-Loop Escalation Workflow (FR-11)
+Epic: EPIC-11 (FR-11, PRD §11)
+User Story: As an underwriter, I want any application that meets any escalation trigger routed to a separate human-review queue, so that no auto-decision happens on a flagged case.
+Acceptance Criteria:
+Given any escalation trigger, When detected, Then the application moves to the human queue with a reason code.
+Given ML confidence < 0.60, When scored, Then the recommendation is forced to Refer.
+Priority: High
+Story Points: 5
+Dependencies: US-206, US-303, US-304
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-307 — Recommendation Evidence Chain Completion (FR-8, AC-6)
+Epic: EPIC-08
+User Story: As a Compliance Officer, I want every recommendation to carry a complete evidence chain (risk + SHAP + policy clauses + doc findings + regulatory result + fairness result), so that audit readiness reaches 100%.
+Acceptance Criteria:
+Given any recommendation, When inspected, Then all 6 evidence components are present.
+Given any missing component, When assembling, Then recommendation is Refer (kill-switch).
+Priority: High
+Story Points: 5
+Dependencies: US-202, US-206, US-302, US-303, US-304
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-308 — Underwriter Override Capture with Reason Code
+Epic: EPIC-11 / EPIC-12
+User Story: As an underwriter, I want to accept, edit, or override the recommendation with a reason code and free-text note, so that human accountability is recorded.
+Acceptance Criteria:
+Given a recommendation, When I override, Then the action, reason code, and note are persisted on the decision record.
+Given repeat overrides, When aggregated, Then an override-rate metric is computed weekly.
+Priority: High
+Story Points: 3
+Dependencies: US-307, US-108
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-309 — Underwriter UI Evidence Panel (Risk · Policy · Docs · Regulatory · Fairness)
+Epic: EPIC-12
+User Story: As an underwriter, I want a single panel showing risk band, SHAP factors, policy clauses with citations, doc findings, regulatory result, fairness result, so that I can review without re-reading the raw file.
+Acceptance Criteria:
+Given an assessed application, When I open it, Then all 5 evidence sections render with citations and timestamps.
+Given a citation click, When activated, Then the source clause text and version open.
+Priority: High
+Story Points: 5
+Dependencies: US-307
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+Sprint Deliverables: Document verification, regulatory verification, fairness audit with hard-block, escalation workflow, complete evidence chain, override capture, evidence-panel UI.
+Sprint Risks: Mock-API instability; fairness false positives; proxy leakage requiring feature changes.
+10. Sprint 4 — Audit, Hardening, Cost/Latency Guardrails, Pilot Readiness
+Sprint Goal: Reach the PRD §12 acceptance bar — immutable audit, guardrails enforced (cost, latency, hallucination, audit completeness), pilot dashboard, underwriter pilot executed.
+Duration: 2 weeks   Story Points: 50
+Features: FR-10 (immutable), NFRs (cost/latency/security), pilot operations
+US-401 — Immutable Audit Log (FR-10, AC-10)
+Epic: EPIC-10
+User Story: As a Compliance Officer, I want an append-only, queryable audit store for every decision and every external call, so that 100% audit readiness is met.
+Acceptance Criteria:
+Given any decision, When written, Then the record is immutable and cryptographically hashed.
+Given an auditor query, When run, Then the full reasoning is reconstructable from stored artefacts alone.
+Priority: High
+Story Points: 8
+Dependencies: US-108, US-307
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-402 — Cost-Per-Application Gateway Metering & Hard Cutoff
+Epic: EPIC-13 (NFR-Cost, AC-8)
+User Story: As an Ops Manager, I want per-application token/embedding cost metered at the gateway, with automatic human-fallback above $0.08, so that the cost guardrail is enforced.
+Acceptance Criteria:
+Given any assessment, When cost is computed, Then it is persisted on the decision record.
+Given projected cost > $0.08, When detected mid-run, Then the system degrades to the human path.
+Priority: High
+Story Points: 5
+Dependencies: US-208
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-403 — Load Test & P95 Latency Certification (AC-9)
+Epic: EPIC-13 (NFR-Latency)
+User Story: As an SRE, I want a 50-concurrent-request load test certifying P95 ≤ 20 s end-to-end, so that the latency NFR is provably met.
+Acceptance Criteria:
+Given a 50-concurrent test, When measured, Then P95 ≤ 20 s.
+Given breached budgets, When observed, Then the failing stage is identified in the report.
+Priority: High
+Story Points: 5
+Dependencies: US-307
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-404 — Hallucination & Faithfulness Eval Harness (AC-7)
+Epic: EPIC-09
+User Story: As a QA lead, I want an automated LLM-judge + spot-check pipeline running on every release, so that hallucination rate < 1% is enforced.
+Acceptance Criteria:
+Given the release candidate, When the eval runs, Then hallucination rate < 1% and faithfulness ≥ 90%.
+Given a regression, When detected, Then the build is blocked.
+Priority: High
+Story Points: 5
+Dependencies: US-208
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-405 — Kill-Switch & Degraded-Mode Operations (PRD §11)
+Epic: EPIC-11 / EPIC-13
+User Story: As an SRE, I want a global kill-switch and automatic degraded-mode when any guardrail is breached or evidence chain is incomplete, so that the system never auto-decides on broken state.
+Acceptance Criteria:
+Given a sub-component failure, When detected, Then affected applications route to human review automatically.
+Given an operator-triggered kill-switch, When activated, Then all new recommendations route to humans within 60 s.
+Priority: High
+Story Points: 5
+Dependencies: US-306
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-406 — Secrets Management & Least-Privilege Tool Access
+Epic: EPIC-14 (NFR-Security)
+User Story: As a Security Engineer, I want all API keys in a secrets manager and per-tool least-privilege scopes, so that the security NFR is met.
+Acceptance Criteria:
+Given a code scan, When run, Then no secret literals are present.
+Given an external call, When issued, Then an audit log entry is created.
+Priority: High
+Story Points: 3
+Dependencies: US-209
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-407 — Operations Dashboard (Throughput, Cost, Latency, Acceptance, Override, Fairness)
+Epic: EPIC-13
+User Story: As an Ops Manager, I want a single dashboard with the PRD §8 KPIs, so that I can identify bottlenecks and control spend.
+Acceptance Criteria:
+Given live traffic, When I open the dashboard, Then I see throughput, P95 latency, cost/app, acceptance rate, override rate, fairness gap with do-not-ship thresholds.
+Given any threshold breach, When detected, Then an alert is sent.
+Priority: High
+Story Points: 5
+Dependencies: US-402, US-403, US-308, US-304
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-408 — Underwriter Pilot Execution (3 x 20 files) (AC-11)
+Epic: EPIC-12
+User Story: As a Product Owner, I want 3 underwriters to process 20 files each through the copilot, so that we measure acceptance rate ≥ 75% and review-time reduction ≥ 50%.
+Acceptance Criteria:
+Given the pilot protocol, When completed, Then acceptance rate ≥ 75% and median review time ≤ 22 min.
+Given override patterns, When analysed, Then a remediation list is produced.
+Priority: High
+Story Points: 8
+Dependencies: US-309, US-407
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-409 — Final Acceptance Verification (AC-1…AC-11)
+Epic: EPIC-15
+User Story: As a Delivery Manager, I want a single verification report mapping every PRD AC to evidence, so that final sign-off is unambiguous.
+Acceptance Criteria:
+Given AC-1…AC-11, When verified, Then each AC is marked PASS with a linked artefact.
+Given any AC failure, When detected, Then a remediation plan is attached.
+Priority: High
+Story Points: 3
+Dependencies: all prior
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+US-410 — Release Documentation & Runbook
+Epic: EPIC-15
+User Story: As an SRE, I want a runbook covering deploy, rollback, kill-switch, on-call escalation, and known failure modes, so that operations can run the pilot safely.
+Acceptance Criteria:
+Given the runbook, When reviewed, Then every kill-switch and fallback path is documented.
+Given a tabletop drill, When executed, Then the team executes a degraded-mode scenario successfully.
+Priority: Medium
+Story Points: 3
+Dependencies: US-405
+Definition of Done: Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo
+Sprint Deliverables: Immutable audit, cost/latency guardrails enforced, hallucination eval CI, kill-switch, secrets/access hardening, ops dashboard, underwriter pilot results, final AC verification, runbook.
+Sprint Risks: Pilot acceptance below 75%; latency P95 regression; hidden audit gaps surfaced in compliance review.
+11. Complete Product Backlog
+Story
+Title
+Epic
+Sprint
+Pts
+Priority
+US-001
+Functional Requirement Gathering
+EPIC-15
+0
+3
+High
+US-002
+Business Requirement Analysis
+EPIC-15
+0
+3
+High
+US-003
+Stakeholder Discussions
+EPIC-12
+0
+3
+High
+US-004
+PRD Review & Validation
+EPIC-15
+0
+2
+High
+US-005
+Requirement Clarification (A-8b)
+EPIC-15
+0
+2
+High
+US-006
+User Flow Definition
+EPIC-12
+0
+3
+High
+US-007
+Wireframes / Mockups
+EPIC-12
+0
+3
+Medium
+US-008
+Technical Feasibility
+EPIC-15
+0
+3
+High
+US-009
+HL Architecture
+EPIC-15
+0
+3
+High
+US-010
+DB Design Planning
+EPIC-10
+0
+3
+High
+US-011
+API Contract Definition
+EPIC-15
+0
+3
+High
+US-012
+Risk Register
+EPIC-15
+0
+2
+High
+US-013
+Backlog Creation
+EPIC-15
+0
+3
+High
+US-014
+Sprint Planning
+EPIC-15
+0
+2
+High
+US-015
+DoR & DoD
+EPIC-15
+0
+1
+High
+US-101
+Basic Auth
+EPIC-14
+1
+3
+High
+US-102
+Basic Ingestion
+EPIC-01
+1
+3
+High
+US-103
+Baseline ML Risk Score
+EPIC-02
+1
+5
+High
+US-104
+Minimal Policy Corpus (5 clauses)
+EPIC-03
+1
+2
+High
+US-105
+RAG Retrieval (single scheme)
+EPIC-03
+1
+5
+High
+US-106
+POC Recommendation
+EPIC-08
+1
+5
+High
+US-107
+Basic Underwriter UI
+EPIC-12
+1
+5
+High
+US-108
+POC Audit Record
+EPIC-10
+1
+3
+High
+US-109
+Mock Regulatory Stub
+EPIC-06
+1
+3
+Medium
+US-110
+POC Demo Script
+EPIC-15
+1
+2
+High
+US-111
+RAG Accuracy Spike
+EPIC-03
+1
+3
+High
+US-201
+Hardened ML AUC ≥ 0.80
+EPIC-02
+2
+8
+High
+US-202
+SHAP Top Contributors
+EPIC-02
+2
+5
+High
+US-203
+Full 6-Scheme Policy Corpus
+EPIC-03
+2
+5
+High
+US-204
+Multi-Scheme RAG + Source IDs
+EPIC-03
+2
+5
+High
+US-205
+Retrieval Quality Monitoring
+EPIC-13
+2
+5
+High
+US-206
+Multi-Scheme Policy Evaluator
+EPIC-04
+2
+8
+High
+US-207
+Policy Versioning & Re-Index
+EPIC-03
+2
+3
+Medium
+US-208
+Grounded Explanation Generation
+EPIC-09
+2
+5
+High
+US-209
+PII Redaction Layer
+EPIC-14
+2
+3
+High
+US-301
+Document Upload & Storage
+EPIC-05
+3
+3
+High
+US-302
+Doc Completeness/Consistency
+EPIC-05
+3
+8
+High
+US-303
+Regulatory Mock + Retry/Escalation
+EPIC-06
+3
+8
+High
+US-304
+Fairness Audit + Hard Block
+EPIC-07
+3
+8
+High
+US-305
+Proxy Leakage Assessment
+EPIC-07
+3
+3
+Medium
+US-306
+Full HITL Escalation
+EPIC-11
+3
+5
+High
+US-307
+Complete Evidence Chain
+EPIC-08
+3
+5
+High
+US-308
+Override Capture
+EPIC-11
+3
+3
+High
+US-309
+Evidence Panel UI
+EPIC-12
+3
+5
+High
+US-401
+Immutable Audit
+EPIC-10
+4
+8
+High
+US-402
+Cost Metering + Cutoff
+EPIC-13
+4
+5
+High
+US-403
+Load Test & P95 Cert
+EPIC-13
+4
+5
+High
+US-404
+Hallucination Eval Harness
+EPIC-09
+4
+5
+High
+US-405
+Kill-Switch & Degraded Mode
+EPIC-11
+4
+5
+High
+US-406
+Secrets & Least-Privilege
+EPIC-14
+4
+3
+High
+US-407
+Ops Dashboard
+EPIC-13
+4
+5
+High
+US-408
+Underwriter Pilot
+EPIC-12
+4
+8
+High
+US-409
+Final AC Verification
+EPIC-15
+4
+3
+High
+US-410
+Release Runbook
+EPIC-15
+4
+3
+Medium
+Definition of Done (applies to every story): Code Complete · Code Reviewed · Unit Tested · Integration Tested · Acceptance Criteria Met · Documentation Updated · Ready for Demo.
+12. User Story Traceability Matrix (Requirement → Epic → User Story → Sprint)
+PRD Reference
+Epic
+User Story
+Sprint
+FR-1 Application Ingestion
+EPIC-01
+US-102
+1
+FR-2 Credit Risk Prediction
+EPIC-02
+US-103, US-201, US-202
+1, 2
+FR-3 Multi-Scheme Policy Evaluation
+EPIC-04
+US-206
+2
+FR-4 Policy Retrieval (RAG)
+EPIC-03
+US-104, US-105, US-203, US-204, US-205, US-207, US-111
+1, 2
+FR-5 Document Verification
+EPIC-05
+US-301, US-302
+3
+FR-6 Regulatory Validation
+EPIC-06
+US-109, US-303
+1, 3
+FR-7 Fairness Audit
+EPIC-07
+US-304, US-305
+3
+FR-8 Recommendation Generation
+EPIC-08
+US-106, US-307
+1, 3
+FR-9 Explanation Generation
+EPIC-09
+US-208, US-404
+2, 4
+FR-10 Audit Logging
+EPIC-10
+US-010, US-108, US-401
+0, 1, 4
+FR-11 Human-in-the-Loop Workflow
+EPIC-11
+US-306, US-308, US-405
+3, 4
+NFR Latency
+EPIC-13
+US-008, US-403
+0, 4
+NFR Availability
+EPIC-15
+US-410
+4
+NFR Cost ceiling
+EPIC-13
+US-402
+4
+NFR Data privacy
+EPIC-14
+US-209
+2
+NFR Explainability
+EPIC-09 / EPIC-08
+US-202, US-208, US-307
+2, 3
+NFR Audit trail
+EPIC-10
+US-401
+4
+NFR Human fallback
+EPIC-11
+US-405
+4
+NFR Security
+EPIC-14
+US-406
+4
+AC-1 End-to-end workflow
+All
+US-110, US-409
+1, 4
+AC-2 AUC ≥ 0.80 / F1 ≥ 0.72
+EPIC-02
+US-201
+2
+AC-3 Retrieval accuracy ≥ 95%
+EPIC-03
+US-111, US-205
+1, 2
+AC-4 Policy adherence 100%
+EPIC-04
+US-206
+2
+AC-5 Fairness gap ≤ 5 pp
+EPIC-07
+US-304
+3
+AC-6 Complete evidence chain
+EPIC-08
+US-307
+3
+AC-7 Hallucination < 1%
+EPIC-09
+US-404
+4
+AC-8 Cost < $0.05/app
+EPIC-13
+US-402
+4
+AC-9 P95 ≤ 20 s @ 50 concurrent
+EPIC-13
+US-403
+4
+AC-10 Audit readiness 100%
+EPIC-10
+US-401
+4
+AC-11 Acceptance rate ≥ 75%
+EPIC-12
+US-408
+4
+Assumption A-8b
+EPIC-02 / EPIC-07
+US-005, US-201, US-305
+0, 2, 3
+Risk Policy RAG miss
+EPIC-03
+US-111, US-205
+1, 2
+13. Risks
+#
+Risk
+Likelihood
+Impact
+Mitigation
+Owner Sprint
+R-1
+Policy RAG miss (wrong/no clause)
+High
+Critical
+De-risk spike US-111; floor 85%; daily monitoring US-205
+1, 2
+R-2
+Biased ML (disparate impact)
+High
+Critical
+Exclude gender/age (US-201); fairness hard-block US-304; proxy assessment US-305
+2, 3
+R-3
+LLM hallucinates policy rule
+Medium
+Critical
+Citations mandatory US-208; eval harness US-404 (block > 3%)
+2, 4
+R-4
+Over-automation on edge cases
+Medium
+High
+Confidence < 0.60 → Refer (US-306); thin-file rule
+3
+R-5
+Cost blowout via long contexts
+Medium
+Medium
+Gateway metering + cutoff US-402; cheap tier for non-reasoning
+4
+R-6
+Mock regulatory API failure
+Low
+High
+Retry/back-off + escalation (US-303); never fabricate
+3
+R-7
+Stale policy versions retrieved
+Low
+High
+Version metadata + re-index US-207
+2
+R-8
+PII leakage into LLM
+Medium
+Critical
+PII redactor US-209; secret-scanning US-406
+2, 4
+R-9
+Pilot acceptance < 75%
+Medium
+High
+Evidence panel US-309; override analysis US-308
+3, 4
+R-10
+P95 latency regression
+Medium
+High
+Per-component budgets (US-008); load test US-403
+0, 4
+14. Dependencies
+Cross-team: Compliance SME availability for corpus authoring (US-104, US-203); Underwriter pool for pilot (US-408); SRE for load test infra (US-403).
+Data: HC 2018 dataset access (A-1, A-4); synthetic policy corpus (A-2).
+Tooling: Third-party LLM API + embedding service (A-6); vector store (e.g., Chroma) per A-9; secrets manager (US-406); observability stack (US-407).
+Sequencing: US-103 → US-201 → US-202 (ML hardening chain).
+Sequencing: US-104 → US-203 → US-204 → US-206 (policy chain).
+Sequencing: US-307 depends on US-202, US-206, US-302, US-303, US-304.
+Sequencing: US-408 depends on US-309 and US-407.
+Sequencing: US-409 depends on every prior AC-tied story.
+15. Release Plan
+Release
+Sprints
+Theme
+Gating Criteria
+R0 — Internal POC
+Sprint 1
+End-to-end thin slice
+Demo passes; RAG spike ≥ 85%
+R1 — Alpha (Internal)
+Sprints 2–3
+Multi-scheme + evidence chain + fairness
+AUC ≥ 0.80, retrieval ≥ 95%, policy adherence 100%, fairness ≤ 5 pp
+R2 — Pilot (3 underwriters)
+Sprint 4
+Pilot-grade hardening
+Cost < $0.05/app, P95 ≤ 20 s, hallucination < 1%, audit 100%
+R3 — Production Pilot Sign-off
+End of Sprint 4
+Final acceptance
+AC-1…AC-11 all PASS; acceptance rate ≥ 75%
+V2 (Future)
+Beyond Sprint 4
+LGD/EAD, live bureau, KYC
+See section 16
+16. MVP Scope vs Future Enhancements
+MVP (Sprints 1–4):
+Single end-to-end copilot pipeline (Ingest → ML → RAG → Policy → Docs → Regulatory → Fairness → Recommendation → Audit)
+6 loan schemes (Personal, Education, Vehicle, Business, First-Time Borrower, Low-Income)
+Mock bureau/regulatory/KYC
+Underwriter web UI with evidence panel, override capture
+KPIs: AUC ≥ 0.80, retrieval ≥ 95%, fairness ≤ 5 pp, cost < $0.05, P95 ≤ 20 s, audit 100%, acceptance ≥ 75%
+Future (V2 and beyond):
+LGD / EAD modelling (recovery rate, collateral valuation) — PRD §5 explicitly defers
+Live credit-bureau APIs (currently mocked)
+Real KYC / identity verification
+Applicant-facing portal & communications
+Production-grade fraud detection beyond dataset signals
+Multi-jurisdiction regulatory licensing
+Automated policy-corpus update pipelines (cadence < monthly)
+Continual learning / online retraining of ML model
+Multi-language explanations
+17. Sprint Plan Summary
+Sprint
+Goal
+# Stories
+Total Pts
+Expected Deliverables
+Sprint 0
+Discovery, planning, de-risking; no feature development
+15
+34
+Signed PRD, persona journeys, wireframes, HL architecture, DB design, OpenAPI, risk register, prioritised backlog, DoR/DoD
+Sprint 1 (POC)
+End-to-end thin slice demoing the core workflow
+11
+39
+POC: auth, ingestion, baseline ML, single-scheme RAG, recommendation, basic UI, audit record, RAG spike report
+Sprint 2
+Multi-scheme policy, ML hardening, grounded explanations
+9
+47
+AUC ≥ 0.80 + SHAP, 6-scheme corpus, scheme-aware RAG, rule evaluator, explanation generator, PII redactor, retrieval-quality dashboards
+Sprint 3
+Document verification, regulatory, fairness hard-block, evidence chain
+9
+47
+Doc verification, mock regulatory + retries, fairness audit, full HITL escalation, complete evidence chain, override capture, evidence-panel UI
+Sprint 4
+Audit, cost/latency guardrails, kill-switch, pilot, final acceptance
+10
+50
+Immutable audit, cost cutoff, P95 load cert, hallucination CI, kill-switch, secrets hardening, ops dashboard, pilot results, AC verification, runbook
+Total
+
+54
+217
+Pilot-ready Halcyon Credit Agentic Underwriting Copilot
+
+End of Agile Backlog · Halcyon Credit Agentic Underwriting Copilot

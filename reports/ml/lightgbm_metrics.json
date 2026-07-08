@@ -1,0 +1,16 @@
+{
+    "roc_auc": 0.7616993723477409,
+    "accuracy": 0.7021283514625303,
+    "precision": 0.16852817076197568,
+    "recall": 0.6837865055387714,
+    "f1": 0.27041019514137793,
+    "confusion_matrix": {
+        "true_negatives": 39788,
+        "false_positives": 16750,
+        "false_negatives": 1570,
+        "true_positives": 3395
+    },
+    "feature_count": 32,
+    "model_version": "v1",
+    "training_timestamp": "2026-07-07 12:43:55"
+}

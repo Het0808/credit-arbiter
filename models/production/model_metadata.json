@@ -1,0 +1,16 @@
+{
+    "selected_model_name": "LightGBM",
+    "selected_model_version": "v1",
+    "reason_for_selection": "LightGBM outperformed Logistic Regression on ROC-AUC (+0.0176), Recall (+0.0117), and F1-score (+0.0124) due to its ability to model non-linear decision boundaries and variable interactions natively.",
+    "ROC-AUC": 0.7616993723477409,
+    "Precision": 0.16852817076197568,
+    "Recall": 0.6837865055387714,
+    "F1": 0.27041019514137793,
+    "threshold_policy": {
+        "conservative": 0.36,
+        "balanced": 0.66,
+        "revenue_friendly": 0.75
+    },
+    "feature_count": 32,
+    "training_date": "2026-07-07"
+}
