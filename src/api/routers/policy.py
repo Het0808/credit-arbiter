@@ -17,7 +17,7 @@ def retrieve_policy(
     current_user: User = Depends(get_current_user),
 ):
     if request.query:
-        return retrieve(request.query)
+        return retrieve(request.query, scheme=request.scheme)
 
     if request.application_id is not None:
         application = db.query(Application).filter(Application.id == request.application_id).first()
@@ -30,6 +30,7 @@ def retrieve_policy(
             "days_employed": application.days_employed,
             "region_rating_client": application.region_rating_client,
         }
-        return retrieve_for_profile(profile)
+        scheme = request.scheme or application.loan_scheme
+        return retrieve_for_profile(profile, scheme=scheme)
 
     raise HTTPException(status_code=400, detail="Either application_id or query is required")
