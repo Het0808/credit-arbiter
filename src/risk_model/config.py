@@ -13,15 +13,8 @@ from typing import Dict, List, Any
 # Base paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Paths requested by user
 DATA_PATH = "data/home_credit_data/application_train.csv"
-MODEL_PATH = "models/risk_model.pkl"
-REPORT_PATH = "reports/ml/model_metrics.json"
-
-# Absolute paths for robustness
 DATA_PATH_ABS = PROJECT_ROOT / DATA_PATH
-MODEL_PATH_ABS = PROJECT_ROOT / MODEL_PATH
-REPORT_PATH_ABS = PROJECT_ROOT / REPORT_PATH
 
 # Target and ID columns requested by user
 TARGET_COLUMN = "TARGET"
@@ -31,9 +24,6 @@ ID_COLUMN = "SK_ID_CURR"
 class ModelConfig:
     """Configuration class for ML model hyperparameters and pipeline parameters."""
 
-    # Model definition
-    MODEL_TYPE: str = "xgboost"  # Default model type
-    
     # Feature columns (selected for MVP from Home Credit dataset)
     #
     # Assumption A-8b (PRD, Confirmed in Sprint 0): CODE_GENDER and DAYS_BIRTH
@@ -100,9 +90,9 @@ class ModelConfig:
     
     # Training hyperparameters
     HYPERPARAMETERS: Dict[str, Any] = {
-        "n_estimators": 100,
-        "max_depth": 6,
-        "learning_rate": 0.05,
+        "n_estimators": 400,
+        "max_depth": 8,
+        "learning_rate": 0.03,
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "random_state": 42,
@@ -113,5 +103,5 @@ class ModelConfig:
     RANDOM_STATE: int = 42
 
     def __repr__(self) -> str:
-        return f"<ModelConfig model_type={self.MODEL_TYPE}>"
+        return f"<ModelConfig target={self.TARGET_COLUMN}>"
 

@@ -53,9 +53,11 @@ fallback both pointed at paths that didn't exist. All fixed; both models were
 retrained clean and the numbers below are the honest post-fix result.
 
 - [x] **US-201 Production ML model**: `src/risk_model/` retrained with
-  `CODE_GENDER`/`DAYS_BIRTH`/`AGE_YEARS` excluded from features. **AUC 0.7575
-  (LightGBM champion), 0.7415 (Logistic Regression baseline) - both above the
-  0.70 do-not-ship floor but short of the 0.80 target (AC-2).** F1 ~0.27,
+  `CODE_GENDER`/`DAYS_BIRTH`/`AGE_YEARS` excluded from features. **AUC 0.7617
+  (LightGBM champion, tuned), 0.7415 (Logistic Regression baseline) - both
+  above the 0.70 do-not-ship floor but short of the 0.80 target (AC-2). A
+  hyperparameter bump (n_estimators/depth/lr) moved AUC +0.004 - the ceiling
+  is the feature set, not tuning; not chasing further.** F1 ~0.27,
   also short of the 0.72 target. This is disclosed, not hidden - see
   `reports/ml/lightgbm_metrics.json` and `model_comparison_logreg_vs_lightgbm.md`.
   Wired into the live `/api/assess` and `/api/score` endpoints via
@@ -117,11 +119,16 @@ retrained clean and the numbers below are the honest post-fix result.
   view (throughput, recommendation mix, escalation/acceptance/override
   rates, avg cost, avg/p95 latency).
 
-### Explicitly not done (needs real infra/humans, not more code)
-- **US-403 load-test certification**: no load-test script or live P95
-  certification was produced this pass - would need to be run against a
-  deployed instance under real concurrency, not something a code change can
-  satisfy.
+- [x] **US-403 load test**: `scripts/load_test.py` (stdlib only), 50
+  concurrent x 200 `/api/assess` requests, P95 12.0s (AC-9: <=20s, PASS).
+  Surfaced and fixed a real bug along the way: the default SQLAlchemy pool
+  (5+10=15 connections) couldn't serve 50 concurrent requests, and the
+  tempting fix (`StaticPool`, one shared sqlite3 connection) is not actually
+  thread-safe despite `check_same_thread=False` - caused `bad parameter or
+  other API misuse` errors under load. Real fix: `pool_size=50` + sqlite
+  `timeout=15` busy-wait in `src/api/database.py`.
+
+### Explicitly not done (needs real humans, not more code)
 - **US-408 underwriter pilot**: requires 3 real underwriters processing real
   files; not applicable to an automated coding pass.
 - **US-404 full hallucination-eval harness**: the grounding/citation check in
@@ -129,14 +136,10 @@ retrained clean and the numbers below are the honest post-fix result.
   LLM-judge + spot-check pipeline the PRD describes for CI gating.
 
 ### Known limitations carried forward
-- AUC (0.7575) and F1 (~0.27) remain short of AC-2's targets even after the
-  A-8b fix - removing `CODE_GENDER`/`DAYS_BIRTH` cost a small amount of AUC as
-  expected, but the model was already short of target beforehand. Reaching
-  AC-2 needs real modeling work (feature engineering, hyperparameter tuning,
-  possibly resampling for the 8% base rate), not something already covered.
-- `data/sample_applications.csv` is gitignored by the existing `data/**/*.csv`
-  rule - a fresh clone's `python -m scripts.seed_db` will fail until this
-  10-row synthetic file is either committed or the gitignore rule is narrowed.
+- AUC (0.7617) and F1 (~0.27) remain short of AC-2's targets even after the
+  A-8b fix and a hyperparameter tune - the ceiling is the feature set, not
+  something more code fixes. Reaching AC-2 needs new features (relational
+  data from `bureau.csv`/`previous_application.csv`) or resampling.
 
 ## Environment Variables
 - Create a `.env` file at the root.

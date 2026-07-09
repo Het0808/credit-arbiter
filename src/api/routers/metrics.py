@@ -1,3 +1,5 @@
+from collections import Counter
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -22,9 +24,7 @@ def get_metrics(db: Session = Depends(get_db), current_user: User = Depends(get_
     costs = [r.cost_usd for r in records if r.cost_usd is not None]
     latencies = [r.latency_ms for r in records if r.latency_ms is not None]
 
-    recommendation_counts = {}
-    for r in records:
-        recommendation_counts[r.recommendation] = recommendation_counts.get(r.recommendation, 0) + 1
+    recommendation_counts = dict(Counter(r.recommendation for r in records))
 
     escalation_count = sum(1 for r in records if r.escalation_flag)
 

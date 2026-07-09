@@ -227,8 +227,9 @@ __marimo__/
 ddl/
 rejects/
 
-# Data
-data/**/*.csv
+# Data (real Home Credit dataset only - data/sample_applications.csv is
+# the small synthetic seed file and stays tracked)
+data/home_credit_data/**/*.csv
 
 # Machine Learning model binaries
 models/**/*.pkl
