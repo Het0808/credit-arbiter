@@ -6,14 +6,16 @@ from sqlalchemy.orm import Session
 from ..auth import get_current_user
 from ..database import get_db
 from ..models import DecisionRecord, User
+from ..services.retrieval_quality import FAILURE_RATE_ALERT_THRESHOLD
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 
 
 @router.get("")
 def get_metrics(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Ops dashboard aggregate (US-407 subset): throughput, acceptance rate,
-    override rate, avg cost, avg latency, current fairness gap status."""
+    """Ops dashboard aggregate (US-407 subset, + US-205 live retrieval
+    failure rate): throughput, acceptance rate, override rate, avg cost, avg
+    latency, current fairness gap status."""
     records = db.query(DecisionRecord).all()
     total = len(records)
 
@@ -28,6 +30,8 @@ def get_metrics(db: Session = Depends(get_db), current_user: User = Depends(get_
 
     escalation_count = sum(1 for r in records if r.escalation_flag)
 
+    retrieval_failure_rate = round(sum(1 for r in records if r.retrieval_failed) / total, 4) if total else None
+
     return {
         "throughput": total,
         "recommendation_counts": recommendation_counts,
@@ -41,4 +45,6 @@ def get_metrics(db: Session = Depends(get_db), current_user: User = Depends(get_
         "p95_latency_ms": round(sorted(latencies)[int(len(latencies) * 0.95)], 2) if latencies else None,
         "cost_guardrail_usd": 0.08,
         "fairness_hard_block_pp": 5.0,
+        "retrieval_failure_rate": retrieval_failure_rate,
+        "retrieval_failure_alert": (retrieval_failure_rate or 0.0) > FAILURE_RATE_ALERT_THRESHOLD,
     }

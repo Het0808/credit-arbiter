@@ -253,6 +253,12 @@ function renderMetrics(metrics) {
     ['P95 Latency', metrics.p95_latency_ms !== null ? `${metrics.p95_latency_ms.toFixed(1)} ms` : '-'],
     ['Cost Guardrail', `$${metrics.cost_guardrail_usd.toFixed(2)} / assessment`],
     ['Fairness Hard-Block', `${metrics.fairness_hard_block_pp} pp`],
+    [
+      'Retrieval Failure Rate',
+      metrics.retrieval_failure_alert
+        ? `<span style="color:var(--error);font-weight:600">${formatPercent(metrics.retrieval_failure_rate)} (ALERT)</span>`
+        : formatPercent(metrics.retrieval_failure_rate),
+    ],
   ];
 
   opsStatGrid.innerHTML = cards
