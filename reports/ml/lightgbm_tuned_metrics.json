@@ -1,0 +1,25 @@
+{
+    "roc_auc": 0.764219733400705,
+    "accuracy": 0.6995105929792043,
+    "precision": 0.16784625970706774,
+    "recall": 0.6878147029204431,
+    "f1": 0.2698431511990834,
+    "confusion_matrix": {
+        "true_negatives": 39607,
+        "false_positives": 16931,
+        "false_negatives": 1550,
+        "true_positives": 3415
+    },
+    "best_params": {
+        "classifier__subsample": 0.7,
+        "classifier__num_leaves": 15,
+        "classifier__n_estimators": 150,
+        "classifier__max_depth": 8,
+        "classifier__learning_rate": 0.1,
+        "classifier__colsample_bytree": 0.8
+    },
+    "cv_roc_auc": 0.7596054969077276,
+    "feature_count": 32,
+    "model_version": "v1_tuned",
+    "training_timestamp": "2026-07-08 11:11:33"
+}
