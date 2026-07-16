@@ -25,46 +25,35 @@ Lending algorithms must comply with non-discrimination standards to prevent disp
 
 | Subgroup | Sample Size | Approval Rate | High Risk Rate | Precision | Recall | FPR (False Alarm) | FNR (Missed Defaults) |
 |---|---|---|---|---|---|---|---|
-| **F** | 40,561 | 87.4% | 12.6% | 0.223 | 0.401 | 0.105 | 0.599 |
-| **M** | 20,940 | 81.4% | 18.6% | 0.270 | 0.495 | 0.151 | 0.504 |
-
-### Breakdown: AGE_BAND
-
-| Subgroup | Sample Size | Approval Rate | High Risk Rate | Precision | Recall | FPR (False Alarm) | FNR (Missed Defaults) |
-|---|---|---|---|---|---|---|---|
-| **18-25** | 2,392 | 61.2% | 38.8% | 0.211 | 0.700 | 0.347 | 0.300 |
-| **26-35** | 14,368 | 76.4% | 23.6% | 0.249 | 0.560 | 0.198 | 0.440 |
-| **36-45** | 16,889 | 85.9% | 14.1% | 0.251 | 0.428 | 0.116 | 0.572 |
-| **46-55** | 14,039 | 89.2% | 10.8% | 0.257 | 0.379 | 0.086 | 0.621 |
-| **56-65** | 12,165 | 93.8% | 6.2% | 0.211 | 0.231 | 0.051 | 0.769 |
-| **65+** | 1,650 | 98.2% | 1.8% | 0.035 | 0.017 | 0.018 | 0.983 |
+| **F** | 40,561 | 88.4% | 11.6% | 0.227 | 0.377 | 0.097 | 0.623 |
+| **M** | 20,940 | 79.1% | 20.9% | 0.259 | 0.534 | 0.173 | 0.466 |
 
 ### Breakdown: NAME_EDUCATION_TYPE
 
 | Subgroup | Sample Size | Approval Rate | High Risk Rate | Precision | Recall | FPR (False Alarm) | FNR (Missed Defaults) |
 |---|---|---|---|---|---|---|---|
 | **Academic degree** | 40 | 100.0% | 0.0% | 0.000 | 0.000 | 0.000 | 1.000 |
-| **Higher education** | 15,061 | 93.2% | 6.8% | 0.213 | 0.277 | 0.056 | 0.723 |
-| **Incomplete higher** | 1,988 | 84.2% | 15.8% | 0.254 | 0.510 | 0.128 | 0.490 |
-| **Lower secondary** | 791 | 81.7% | 18.3% | 0.241 | 0.427 | 0.155 | 0.573 |
-| **Secondary / secondary special** | 43,623 | 82.7% | 17.3% | 0.247 | 0.472 | 0.143 | 0.528 |
+| **Higher education** | 15,061 | 93.2% | 6.9% | 0.208 | 0.275 | 0.057 | 0.725 |
+| **Incomplete higher** | 1,988 | 83.6% | 16.4% | 0.245 | 0.510 | 0.134 | 0.490 |
+| **Lower secondary** | 791 | 81.3% | 18.7% | 0.243 | 0.439 | 0.158 | 0.561 |
+| **Secondary / secondary special** | 43,623 | 82.6% | 17.4% | 0.247 | 0.475 | 0.144 | 0.525 |
 
 ### Breakdown: NAME_INCOME_TYPE
 
 | Subgroup | Sample Size | Approval Rate | High Risk Rate | Precision | Recall | FPR (False Alarm) | FNR (Missed Defaults) |
 |---|---|---|---|---|---|---|---|
-| **Commercial associate** | 14,344 | 87.4% | 12.7% | 0.223 | 0.399 | 0.106 | 0.601 |
-| **Pensioner** | 11,228 | 94.7% | 5.3% | 0.217 | 0.211 | 0.044 | 0.789 |
-| **State servant** | 4,185 | 92.1% | 7.9% | 0.233 | 0.342 | 0.064 | 0.658 |
-| **Working** | 31,731 | 80.3% | 19.7% | 0.252 | 0.508 | 0.164 | 0.492 |
+| **Commercial associate** | 14,344 | 87.0% | 13.0% | 0.218 | 0.403 | 0.110 | 0.597 |
+| **Pensioner** | 11,228 | 94.9% | 5.1% | 0.221 | 0.206 | 0.042 | 0.794 |
+| **State servant** | 4,185 | 91.7% | 8.3% | 0.221 | 0.342 | 0.068 | 0.658 |
+| **Working** | 31,731 | 80.1% | 19.9% | 0.252 | 0.512 | 0.165 | 0.488 |
 
 ### Breakdown: REGION_RATING_CLIENT
 
 | Subgroup | Sample Size | Approval Rate | High Risk Rate | Precision | Recall | FPR (False Alarm) | FNR (Missed Defaults) |
 |---|---|---|---|---|---|---|---|
-| **1** | 6,442 | 92.5% | 7.4% | 0.200 | 0.317 | 0.063 | 0.683 |
-| **2** | 45,353 | 86.0% | 14.0% | 0.238 | 0.420 | 0.116 | 0.580 |
-| **3** | 9,708 | 77.5% | 22.5% | 0.269 | 0.550 | 0.184 | 0.450 |
+| **1** | 6,442 | 92.8% | 7.2% | 0.200 | 0.307 | 0.061 | 0.693 |
+| **2** | 45,353 | 85.8% | 14.2% | 0.238 | 0.428 | 0.118 | 0.572 |
+| **3** | 9,708 | 77.6% | 22.4% | 0.265 | 0.538 | 0.185 | 0.462 |
 
 
 ---
