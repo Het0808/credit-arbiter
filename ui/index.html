@@ -56,16 +56,21 @@
               <p id="user-info"></p>
             </div>
             <div class="header-actions">
-              <button id="show-ops-btn" class="btn secondary-btn">Ops Dashboard</button>
+              <button id="ops-toggle-btn" class="btn secondary-btn">Ops Dashboard</button>
               <button id="logout-btn" class="btn secondary-btn">Logout</button>
             </div>
           </div>
 
-          <!-- Ops Dashboard -->
-          <div id="ops-view" class="hidden">
-            <button id="ops-back-btn" class="btn secondary-btn back-btn">&larr; Back to queue</button>
-            <h3 class="section-heading">Operations Dashboard</h3>
-            <div id="ops-stat-grid" class="stat-grid"></div>
+          <!-- Ops Dashboard (US-407) -->
+          <div id="ops-panel" class="ops-panel hidden">
+            <div class="ops-panel-head">
+              <h3 class="section-heading">Operations Dashboard</h3>
+              <label class="killswitch-toggle">
+                <input type="checkbox" id="kill-switch-input"> Global kill-switch
+              </label>
+            </div>
+            <div id="ops-alerts" class="ops-alerts hidden"></div>
+            <div id="ops-kpis" class="kpi-grid"></div>
           </div>
 
           <!-- Application Queue -->
@@ -100,41 +105,28 @@
 
               <div id="escalation-banner" class="escalation-banner hidden">Escalated for human review</div>
 
-              <div class="evidence-row">
-                <span class="evidence-label">Risk Score / Band</span>
-                <span id="result-risk"></span>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Top Risk Factors (SHAP)</span>
-                <div id="result-risk-factors" class="risk-factor-list"></div>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Loan Scheme</span>
-                <span id="result-scheme"></span>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Retrieved Policy Clauses</span>
-                <div id="result-clause"></div>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Policy Rule Evaluation</span>
-                <div id="result-policy-rules"></div>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Document Verification</span>
-                <div id="result-documents"></div>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Regulatory Status</span>
-                <div id="result-regulatory"></div>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Fairness Audit</span>
-                <div id="result-fairness"></div>
-              </div>
-              <div class="evidence-row">
-                <span class="evidence-label">Narrative Explanation</span>
-                <div id="result-explanation" class="narrative-explanation"></div>
+              <!-- US-309: five evidence sections (Risk · Policy · Docs · Regulatory · Fairness) -->
+              <div class="evidence-sections">
+                <section class="evidence-section">
+                  <div class="evidence-section-head"><span>1 · Risk &amp; Factors</span><span id="ev-risk-time" class="evidence-time"></span></div>
+                  <div id="ev-risk" class="evidence-section-body"></div>
+                </section>
+                <section class="evidence-section">
+                  <div class="evidence-section-head"><span>2 · Policy Clauses</span><span id="ev-policy-time" class="evidence-time"></span></div>
+                  <div id="ev-policy" class="evidence-section-body"></div>
+                </section>
+                <section class="evidence-section">
+                  <div class="evidence-section-head"><span>3 · Documents</span><span id="ev-docs-time" class="evidence-time"></span></div>
+                  <div id="ev-docs" class="evidence-section-body"></div>
+                </section>
+                <section class="evidence-section">
+                  <div class="evidence-section-head"><span>4 · Regulatory</span><span id="ev-reg-time" class="evidence-time"></span></div>
+                  <div id="ev-regulatory" class="evidence-section-body"></div>
+                </section>
+                <section class="evidence-section">
+                  <div class="evidence-section-head"><span>5 · Fairness</span><span id="ev-fair-time" class="evidence-time"></span></div>
+                  <div id="ev-fairness" class="evidence-section-body"></div>
+                </section>
               </div>
 
               <div class="evidence-row">
@@ -147,12 +139,14 @@
                 <button id="show-override-btn" class="btn secondary-btn">Override</button>
               </div>
               <div id="override-form" class="hidden">
-                <select id="override-reason-code" class="override-reason-code">
-                  <option value="">Select a reason code&hellip;</option>
-                  <option value="insufficient_evidence">Insufficient evidence</option>
-                  <option value="policy_too_strict">Policy too strict for this case</option>
-                  <option value="doc_follow_up">Documentation follow-up needed</option>
-                  <option value="fairness_concern">Fairness concern</option>
+                <select id="override-reason-code" class="override-select">
+                  <option value="">Select a reason code…</option>
+                  <option value="compensating_factors">Compensating factors</option>
+                  <option value="policy_exception_approved">Policy exception approved</option>
+                  <option value="additional_documentation">Additional documentation</option>
+                  <option value="data_quality_issue">Data quality issue</option>
+                  <option value="risk_appetite">Risk appetite</option>
+                  <option value="regulatory_clarification">Regulatory clarification</option>
                   <option value="other">Other</option>
                 </select>
                 <textarea id="override-reason" class="override-textarea" placeholder="Reason for override (required)"></textarea>

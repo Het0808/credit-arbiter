@@ -80,21 +80,10 @@ def run_fairness_analysis() -> Tuple[pd.DataFrame, Path]:
     
     test_df["y_prob"] = y_prob
     test_df["y_pred"] = y_pred
-
-    # Age band is derived from DAYS_BIRTH for fairness bucketing only (A-8b:
-    # DAYS_BIRTH itself is never a model feature, only retained for audit).
-    age_years = test_df["DAYS_BIRTH"].div(-365.25)
-    test_df["AGE_BAND"] = pd.cut(
-        age_years,
-        bins=[0, 25, 35, 45, 55, 65, 150],
-        labels=["18-25", "26-35", "36-45", "46-55", "56-65", "65+"],
-    ).astype(str)
-
-    # Attributes to evaluate (PRD A-8a: gender, education, income type, region
-    # rating, and age proxy - all fairness-only, never model inputs)
+    
+    # Attributes to evaluate
     sensitive_attributes = [
         "CODE_GENDER",
-        "AGE_BAND",
         "NAME_EDUCATION_TYPE",
         "NAME_INCOME_TYPE",
         "REGION_RATING_CLIENT"

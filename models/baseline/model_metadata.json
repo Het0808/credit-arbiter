@@ -7,6 +7,7 @@
         "AMT_INCOME_TOTAL",
         "AMT_CREDIT",
         "AMT_ANNUITY",
+        "DAYS_BIRTH",
         "DAYS_EMPLOYED",
         "EXT_SOURCE_1",
         "EXT_SOURCE_2",
@@ -18,6 +19,7 @@
         "ANNUITY_INCOME_RATIO",
         "CREDIT_ANNUITY_RATIO",
         "CREDIT_GOODS_RATIO",
+        "AGE_YEARS",
         "EMPLOYMENT_YEARS",
         "CHILDREN_RATIO",
         "INCOME_PER_PERSON",
@@ -29,12 +31,13 @@
         "MISSING_PERCENTAGE",
         "TOTAL_DOCUMENT_FLAGS",
         "NAME_CONTRACT_TYPE",
+        "CODE_GENDER",
         "FLAG_OWN_CAR",
         "FLAG_OWN_REALTY",
         "NAME_INCOME_TYPE",
         "NAME_EDUCATION_TYPE"
     ],
     "target": "TARGET",
-    "roc_auc": 0.7414899057989036,
-    "training_date": "2026-07-08"
+    "roc_auc": 0.7441196265898503,
+    "training_date": "2026-07-07"
 }

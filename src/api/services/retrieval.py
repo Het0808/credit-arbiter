@@ -1,17 +1,17 @@
-"""Multi-scheme policy retrieval engine (FR-4 / US-105, US-203, US-204).
+"""Scheme-aware policy retrieval engine (FR-4 / US-204) with version
+management and replay (US-207).
 
-Uses TF-IDF + cosine similarity over the 20-clause, 6-scheme policy corpus
-(data/policy_corpus_v1.0.json) - a deliberate no-API-key, no-network-call
-choice appropriate at this corpus scale. It is a real, standard sparse-
-retrieval baseline, not a toy stub: explainable (term overlap drives the
-match) and trivially inside the 600ms retrieval budget. The upgrade path
-(embeddings / a vector DB) is the right move once the corpus grows well
-beyond a few dozen clauses (per assumption A-2) - not needed at this scale.
+Retrieval uses TF-IDF + cosine similarity over the policy corpus. Every
+returned clause carries a stable ``source_id`` (its ``clause_id``) and the
+``corpus_version`` it came from, so downstream explanations and audit records
+are traceable to an exact clause in an exact corpus version (AC-3).
 
-Sprint 1's single-scheme v0.1 corpus (data/policy_corpus_personal_loan_v0.1.json)
-is left in place, unmodified, so any decision record referencing it can still
-be replayed against the exact clause text that was retrieved at the time
-(US-207 policy version replay).
+Multiple corpus versions can be loaded simultaneously: the *active* version
+serves live traffic, while any older version can still be queried for replay
+(US-207 AC: "old retrievals can be replayed against the old version"). TF-IDF
+is a deliberate no-API-key, no-network sparse baseline appropriate for a
+~20-clause corpus; the upgrade path to embeddings / a vector DB applies once
+the corpus grows well beyond a few schemes (assumption A-2).
 """
 
 import glob
@@ -22,7 +22,11 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-POLICY_CORPUS_PATH = os.path.join(REPO_ROOT, "data", "policy_corpus_v1.0.json")
+DATA_DIR = os.path.join(REPO_ROOT, "data")
+
+# Default active corpus version. v1.0 is the multi-scheme rulebook (US-203);
+# v0.1 (single-scheme Personal Loan) is retained purely for replay.
+DEFAULT_ACTIVE_VERSION = "v1.0"
 
 RETRIEVAL_FAILURE_FLOOR = 0.05
 
@@ -190,6 +194,10 @@ def reindex(version: str = None) -> dict:
 def active_version() -> str:
     return _ACTIVE_VERSION
 
+
+# --- Public retrieval API (backward compatible with US-105 callers) ---
+
+
 def build_query_from_profile(profile: dict) -> str:
     """Render an applicant's normalised profile into a short text query."""
     parts = [
@@ -202,96 +210,23 @@ def build_query_from_profile(profile: dict) -> str:
     return " ".join(parts)
 
 
-def retrieve(query: str, scheme: str = None, top_k: int = 3) -> dict:
-    """Return the top-k matching policy clauses for a free-text query.
+def retrieve(query: str, scheme: str = None, top_k: int = 3, corpus_version: str = None) -> dict:
+    """Retrieve top-k clauses for a query against the active (or a specified) corpus.
 
-    Args:
-        query: Free-text application context.
-        scheme: If given, only clauses tagged with this scheme are eligible
-            candidates (US-204: scheme-aware retrieval). If None, all schemes
-            are searched (used by ad-hoc /policy/retrieve?query= calls).
-        top_k: Max clauses to return.
-
-    Response shape: {clauses: [{clause_id, source_id, title, text, score,
-    scheme, version}], retrieval_failed}. retrieval_failed=True (empty
-    clauses) when the best match falls below the similarity floor, or when
-    the requested scheme has no candidate clauses at all - downstream this
-    must be treated as a missing input (forces a Refer recommendation),
-    never a fabricated match.
+    ``scheme`` restricts candidates to one loan scheme (US-204). ``corpus_version``
+    enables replay against an older corpus (US-207).
     """
-    candidate_indices = (
-        [i for i, clause in enumerate(_CLAUSES) if clause["scheme"] == scheme]
-        if scheme
-        else list(range(len(_CLAUSES)))
-    )
-    if not candidate_indices:
-        return {"clauses": [], "retrieval_failed": True}
+    return get_index(corpus_version).retrieve(query, scheme=scheme, top_k=top_k)
 
-    query_vector = _VECTORIZER.transform([query])
-    similarities = cosine_similarity(query_vector, _CLAUSE_MATRIX)[0]
-
-    ranked = sorted(candidate_indices, key=lambda i: similarities[i], reverse=True)
-    top_score = similarities[ranked[0]] if ranked else 0.0
 
 def retrieve_for_profile(profile: dict, scheme: str = None, top_k: int = 3, corpus_version: str = None) -> dict:
     return retrieve(build_query_from_profile(profile), scheme=scheme, top_k=top_k, corpus_version=corpus_version)
 
-    clauses = []
-    for i in ranked[:top_k]:
-        if similarities[i] < RETRIEVAL_FAILURE_FLOOR:
-            break
-        clause = _CLAUSES[i]
-        clauses.append(
-            {
-                "clause_id": clause["clause_id"],
-                "source_id": clause["clause_id"],
-                "scheme": clause["scheme"],
-                "version": _CORPUS["version"],
-                "title": clause["title"],
-                "text": clause["text"],
-                "score": round(float(similarities[i]), 4),
-            }
-        )
 
-    return {"clauses": clauses, "retrieval_failed": False}
-
-
-def retrieve_for_profile(profile: dict, scheme: str = None, top_k: int = 3) -> dict:
-    return retrieve(build_query_from_profile(profile), scheme=scheme, top_k=top_k)
+def get_clause(clause_id: str, corpus_version: str = None) -> dict | None:
+    """Fetch a single clause's text + version by id (for citation display, US-309)."""
+    return get_index(corpus_version).get_clause(clause_id)
 
 
 def corpus_metadata() -> dict:
-    return {
-        "version": _CORPUS["version"],
-        "effective_date": _CORPUS["effective_date"],
-        "schemes": _CORPUS["schemes"],
-        "clause_count": len(_CLAUSES),
-    }
-
-
-def reindex_corpus(path: str = POLICY_CORPUS_PATH) -> dict:
-    """Manual re-index trigger (US-207): reload the policy corpus from
-    `path` and make it live for every subsequent retrieve() call in this
-    process, without a restart. Old decision records stay replayable
-    regardless of what's currently loaded - each stores the clause text and
-    version it actually saw (assessment.py's evidence_chain), not just a
-    version pointer."""
-    global _CORPUS, _CLAUSES, _CLAUSE_TEXTS, _VECTORIZER, _CLAUSE_MATRIX
-
-    corpus = _load_corpus(path)
-    clauses = corpus["clauses"]
-    clause_texts = [f"{clause['title']}. {clause['text']}" for clause in clauses]
-    vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words="english")
-    clause_matrix = vectorizer.fit_transform(clause_texts)
-
-    _CORPUS, _CLAUSES, _CLAUSE_TEXTS, _VECTORIZER, _CLAUSE_MATRIX = (
-        corpus,
-        clauses,
-        clause_texts,
-        vectorizer,
-        clause_matrix,
-    )
-    return corpus_metadata()
-
-
-reindex_corpus(POLICY_CORPUS_PATH)
+    return get_index().metadata()

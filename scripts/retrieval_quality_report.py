@@ -1,42 +1,46 @@
-"""US-205 daily eval job: reports retrieval context precision/recall against
-the curated eval set and exits non-zero if either falls below the 0.85 floor
-or the failure rate exceeds the 5% alert threshold. Stdlib + existing deps
-only - no new eval framework.
+"""Daily retrieval-quality report (US-205).
+
+Run from the repo root (venv activated):
 
     python -m scripts.retrieval_quality_report
+
+Evaluates scheme-aware retrieval over data/eval/retrieval_eval_set.json and
+writes reports/ml/retrieval_quality.json. Exits non-zero when any quality
+threshold is breached (context precision < 0.85, recall < 0.85, or failure
+rate > 5%), so it can gate a scheduled/CI job and fire an alert.
 """
 
+import json
+import os
 import sys
 
-from src.api.services.retrieval_quality import (
-    FAILURE_RATE_ALERT_THRESHOLD,
-    PRECISION_RECALL_FLOOR,
-    evaluate_retrieval_quality,
-)
+from src.api.services.retrieval_monitor import evaluate_retrieval_quality
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPORT_PATH = os.path.join(REPO_ROOT, "reports", "ml", "retrieval_quality.json")
 
 
-def main():
-    result = evaluate_retrieval_quality()
-    print(
-        f"precision={result['precision']:.2%} recall={result['recall']:.2%} "
-        f"failure_rate={result['failure_rate']:.2%} (n={result['n']})"
-    )
+def main() -> int:
+    report = evaluate_retrieval_quality()
 
-    ok = True
-    if result["precision"] < PRECISION_RECALL_FLOOR:
-        print(f"ALERT: precision below {PRECISION_RECALL_FLOOR:.0%} floor")
-        ok = False
-    if result["recall"] < PRECISION_RECALL_FLOOR:
-        print(f"ALERT: recall below {PRECISION_RECALL_FLOOR:.0%} floor")
-        ok = False
-    if result["failure_rate"] > FAILURE_RATE_ALERT_THRESHOLD:
-        print(f"ALERT: retrieval failure rate above {FAILURE_RATE_ALERT_THRESHOLD:.0%} threshold")
-        ok = False
+    os.makedirs(os.path.dirname(REPORT_PATH), exist_ok=True)
+    with open(REPORT_PATH, "w", encoding="utf-8") as fh:
+        json.dump(report, fh, indent=2)
 
-    if not ok:
-        sys.exit(1)
-    print("Retrieval quality within bounds.")
+    print(f"context_precision : {report['context_precision']:.2%}")
+    print(f"context_recall    : {report['context_recall']:.2%}")
+    print(f"failure_rate      : {report['retrieval_failure_rate']:.2%}")
+    print(f"report written    : {REPORT_PATH}")
+
+    if report["alerts"]:
+        print("\nALERT - retrieval quality degraded:")
+        for alert in report["alerts"]:
+            print(f"  - {alert}")
+        return 1
+
+    print("\nretrieval quality healthy")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

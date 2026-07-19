@@ -7,7 +7,7 @@ The model is a **Logistic Regression** pipeline, regularized and configured to h
 
 - **Algorithm**: Logistic Regression (`max_iter=1000`, `class_weight="balanced"`)
 - **Pipeline version**: `v1`
-- **Training Timestamp**: 2026-07-08 11:20:05
+- **Training Timestamp**: 2026-07-07 12:34:49
 
 ## Dataset Used
 - **Source**: Home Credit Default Risk application training dataset (`application_train.csv`).
@@ -17,12 +17,13 @@ The model is a **Logistic Regression** pipeline, regularized and configured to h
 
 ## Target & Features Used
 - **Target Variable**: `TARGET` (1 for defaulted applicant, 0 for non-defaulted applicant)
-- **Total Feature Count**: 29 features (numerical + categorical after encoding).
+- **Total Feature Count**: 32 features (numerical + categorical after encoding).
 
 ### Numeric Features List
 - `AMT_INCOME_TOTAL`
 - `AMT_CREDIT`
 - `AMT_ANNUITY`
+- `DAYS_BIRTH`
 - `DAYS_EMPLOYED`
 - `EXT_SOURCE_1`
 - `EXT_SOURCE_2`
@@ -34,6 +35,7 @@ The model is a **Logistic Regression** pipeline, regularized and configured to h
 - `ANNUITY_INCOME_RATIO`
 - `CREDIT_ANNUITY_RATIO`
 - `CREDIT_GOODS_RATIO`
+- `AGE_YEARS`
 - `EMPLOYMENT_YEARS`
 - `CHILDREN_RATIO`
 - `INCOME_PER_PERSON`
@@ -47,6 +49,7 @@ The model is a **Logistic Regression** pipeline, regularized and configured to h
 
 ### Categorical Features List
 - `NAME_CONTRACT_TYPE`
+- `CODE_GENDER`
 - `FLAG_OWN_CAR`
 - `FLAG_OWN_REALTY`
 - `NAME_INCOME_TYPE`
@@ -75,17 +78,17 @@ The following features were engineered to capture financial stress, applicant de
 
 | Metric | Baseline v1 Value |
 |---|---|
-| **ROC-AUC** | **0.7415** |
-| **Accuracy** | **0.6856** |
-| **Precision** | **0.1577** |
-| **Recall** | **0.6669** |
-| **F1-Score** | **0.2551** |
+| **ROC-AUC** | **0.7441** |
+| **Accuracy** | **0.6880** |
+| **Precision** | **0.1597** |
+| **Recall** | **0.6721** |
+| **F1-Score** | **0.2581** |
 
 ### Confusion Matrix (Test Set)
-- **True Negatives (TN)**: 38,855 (Creditworthy applicants approved)
-- **False Positives (FP)**: 17,683 (Creditworthy applicants rejected)
-- **False Negatives (FN)**: 1,654 (Defaulting applicants approved)
-- **True Positives (TP)**: 3,311 (Defaulting applicants blocked)
+- **True Negatives (TN)**: 38,977 (Creditworthy applicants approved)
+- **False Positives (FP)**: 17,561 (Creditworthy applicants rejected)
+- **False Negatives (FN)**: 1,628 (Defaulting applicants approved)
+- **True Positives (TP)**: 3,337 (Defaulting applicants blocked)
 
 ## Visualizations
 
@@ -99,9 +102,9 @@ The following features were engineered to capture financial stress, applicant de
 ![Precision-Recall Curve](plots/precision_recall_curve.png)
 
 ## Business Interpretation
-- **Default Capture Rate (Recall)**: The model intercepts **66.69%** of defaulting applications. Intercepting defaults directly protects capital.
-- **Approval Quality (Precision)**: Because of the low precision (15.77%), flagging an applicant as default has a relatively high false alarm rate. For every true default blocked, the model flags approximately 5 non-defaulting applications. While this trades off customer acquisition, it is standard in conservative risk profiles.
-- **ROC-AUC (0.7415)**: The model possesses strong ranking capability, which is suitable for tiering interest rates and limits.
+- **Default Capture Rate (Recall)**: The model intercepts **67.21%** of defaulting applications. Intercepting defaults directly protects capital.
+- **Approval Quality (Precision)**: Because of the low precision (15.97%), flagging an applicant as default has a relatively high false alarm rate. For every true default blocked, the model flags approximately 5 non-defaulting applications. While this trades off customer acquisition, it is standard in conservative risk profiles.
+- **ROC-AUC (0.7441)**: The model possesses strong ranking capability, which is suitable for tiering interest rates and limits.
 
 ## Known Limitations
 1. **Linear Assumptions**: Logistic Regression assumes linear log-odds relations, failing to model compound interactive effects (e.g. high credit limit *low* income).

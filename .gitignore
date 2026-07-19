@@ -227,12 +227,8 @@ __marimo__/
 ddl/
 rejects/
 
-# Runtime audit log (US-406) — local evidence trail, not source
-logs/
-
-# Data (real Home Credit dataset only - data/sample_applications.csv is
-# the small synthetic seed file and stays tracked)
-data/home_credit_data/**/*.csv
+# Data
+data/**/*.csv
 
 # Machine Learning model binaries
 models/**/*.pkl
@@ -241,5 +237,6 @@ models/**/*.joblib
 # ML visualization plots
 reports/ml/**/*.png
 
-# Uploaded applicant documents (US-301) - local dev storage only
-uploads/
+# Uploaded documents (US-301) and aux feature cache (US-201)
+data/uploads/
+data/home_credit_data/aux_features.parquet

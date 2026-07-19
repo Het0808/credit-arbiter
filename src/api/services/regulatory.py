@@ -1,11 +1,16 @@
-"""Mock regulatory validation (FR-6 / US-109, US-303).
+"""Mock regulatory validation (FR-6 / US-303, hardening US-109).
 
-Four independently-checked sub-services (identity, employment, tax,
-sanctions) - still intentionally mocks, per the PRD's declared v1 scope and
-the out-of-scope declaration for live bureau/KYC integrations. Each sub-check
-never fabricates a verdict: a simulated technical failure of the mock
-external call is retried a bounded number of times and, if still failing,
-surfaces escalate_for_review rather than guessing PASS or FAIL.
+Simulates four independent regulatory checks - identity, employment, tax, and
+sanctions - each behind a mock external call that may transiently fail. Failing
+calls are retried with exponential back-off; if a check cannot be resolved
+after the configured retries it is surfaced as ``escalate_for_review`` rather
+than a fabricated PASS/FAIL. The overall verdict is:
+
+  - FAIL     if any check returns a business FAIL,
+  - escalate_for_review if any check is unresolved after retries (and none FAIL),
+  - PASS     only if all four checks resolve to PASS.
+
+Deterministic per application id so repeated calls are stable and testable.
 """
 
 import hashlib
@@ -20,40 +25,62 @@ BASE_BACKOFF_SECONDS = 0.01
 CHECKS = ("identity", "employment", "tax", "sanctions")
 
 
-SUB_CHECKS = ["identity", "employment", "tax", "sanctions"]
-
-# Sanctions hits should be rare in a mock population; the others mirror the
-# original single-check 90% pass rate.
-_PASS_THRESHOLD = {"identity": 90, "employment": 90, "tax": 90, "sanctions": 99}
+def _hash(*parts: str) -> int:
+    return int(hashlib.sha256("|".join(parts).encode("utf-8")).hexdigest(), 16)
 
 
-def _sub_check_verdict(application_id: str, check_name: str) -> str:
-    """Deterministic PASS/FAIL per (application, sub-check) pair, so repeated
-    calls always return the same verdict for the same applicant."""
-    digest = int(hashlib.sha256(f"{check_name}:{application_id}".encode("utf-8")).hexdigest(), 16)
-    return "PASS" if digest % 100 < _PASS_THRESHOLD[check_name] else "FAIL"
+def _check_verdict(application_id: str, check: str) -> str:
+    """Deterministic PASS/FAIL for one check (sanctions fails rarely; others ~8%)."""
+    digest = _hash(application_id, check)
+    fail_rate = 3 if check == "sanctions" else 8
+    return "FAIL" if digest % 100 < fail_rate else "PASS"
+
+
+def _mock_external_call(application_id: str, check: str, force_fail: bool) -> str:
+    """Return a verdict, or raise ConnectionError to simulate a transient outage."""
+    if force_fail:
+        raise ConnectionError(f"mock {check} service unavailable")
+    return _check_verdict(application_id, check)
+
+
+def _run_check_with_retries(application_id: str, check: str, force_fail: bool) -> dict:
+    last_error = None
+    for attempt in range(MAX_RETRIES):
+        try:
+            verdict = _mock_external_call(application_id, check, force_fail)
+            return {"check": check, "status": verdict, "attempts": attempt + 1, "reason": None}
+        except ConnectionError as exc:
+            last_error = str(exc)
+            time.sleep(BASE_BACKOFF_SECONDS * (2 ** attempt))  # exponential back-off
+    return {
+        "check": check,
+        "status": "escalate_for_review",
+        "attempts": MAX_RETRIES,
+        "reason": f"unresolved_after_{MAX_RETRIES}_retries: {last_error}",
+    }
 
 
 def verify_regulatory(application_id: str, force_fail: bool = False) -> dict:
-    """Return {"status": "PASS" | "FAIL" | "escalate_for_review", "reason": str | None,
-    "sub_checks": {identity, employment, tax, sanctions} -> "PASS"/"FAIL"}.
+    """Run all four regulatory checks and return the aggregate verdict.
 
-    Overall status is PASS only if every sub-check passes. force_fail
-    simulates a transient failure of the mock external regulatory service
-    (distinct from a genuine FAIL business verdict): it is retried, then
-    escalated - never fabricated.
+    Backwards-compatible shape: top-level ``status`` in {PASS, FAIL,
+    escalate_for_review} and ``reason``, plus a per-check ``checks`` breakdown.
+    ``force_fail`` simulates every external call being down (transient), which
+    must escalate - never fabricate a verdict.
     """
-    if force_fail:
-        for _ in range(MAX_RETRIES):
-            time.sleep(RETRY_BACKOFF_SECONDS)
-        return {
-            "status": "escalate_for_review",
-            "reason": "regulatory_service_unavailable_after_retries",
-            "sub_checks": {},
-        }
+    results = [_run_check_with_retries(application_id, c, force_fail) for c in CHECKS]
 
-    sub_checks = {check: _sub_check_verdict(application_id, check) for check in SUB_CHECKS}
-    failed = [name for name, verdict in sub_checks.items() if verdict == "FAIL"]
-    status = "PASS" if not failed else "FAIL"
-    reason = None if status == "PASS" else f"failed_checks:{','.join(failed)}"
-    return {"status": status, "reason": reason, "sub_checks": sub_checks}
+    failed = [r for r in results if r["status"] == "FAIL"]
+    unresolved = [r for r in results if r["status"] == "escalate_for_review"]
+
+    if failed:
+        status = "FAIL"
+        reason = "failed_checks: " + ", ".join(r["check"] for r in failed)
+    elif unresolved:
+        status = "escalate_for_review"
+        reason = "unresolved_checks: " + ", ".join(r["check"] for r in unresolved)
+    else:
+        status = "PASS"
+        reason = None
+
+    return {"status": status, "reason": reason, "checks": results}

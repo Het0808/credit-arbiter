@@ -13,8 +13,15 @@ from typing import Dict, List, Any
 # Base paths
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-DATA_PATH = "data/home_credit_data/application_train.csv"
+# Paths requested by user
+DATA_PATH = "data/raw/application_train.csv"
+MODEL_PATH = "models/risk_model.pkl"
+REPORT_PATH = "reports/ml/model_metrics.json"
+
+# Absolute paths for robustness
 DATA_PATH_ABS = PROJECT_ROOT / DATA_PATH
+MODEL_PATH_ABS = PROJECT_ROOT / MODEL_PATH
+REPORT_PATH_ABS = PROJECT_ROOT / REPORT_PATH
 
 # Target and ID columns requested by user
 TARGET_COLUMN = "TARGET"
@@ -115,22 +122,15 @@ class ModelConfig:
         "NAME_INCOME_TYPE",
         "NAME_EDUCATION_TYPE",
     ]
-
-    # Attributes retained ONLY for fairness auditing (fairness.py) - never
-    # passed to the model as predictors. Age band is derived from DAYS_BIRTH.
-    FAIRNESS_ONLY_ATTRIBUTES: List[str] = [
-        "CODE_GENDER",
-        "DAYS_BIRTH",
-    ]
     
     TARGET_COLUMN: str = TARGET_COLUMN
     ID_COLUMN: str = ID_COLUMN
     
     # Training hyperparameters
     HYPERPARAMETERS: Dict[str, Any] = {
-        "n_estimators": 400,
-        "max_depth": 8,
-        "learning_rate": 0.03,
+        "n_estimators": 100,
+        "max_depth": 6,
+        "learning_rate": 0.05,
         "subsample": 0.8,
         "colsample_bytree": 0.8,
         "random_state": 42,
@@ -141,5 +141,5 @@ class ModelConfig:
     RANDOM_STATE: int = 42
 
     def __repr__(self) -> str:
-        return f"<ModelConfig target={self.TARGET_COLUMN}>"
+        return f"<ModelConfig model_type={self.MODEL_TYPE}>"
 

@@ -6,20 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from src.api.database import Base, get_db
 from src.api.main import app
-from src.api.models import Application, Document
-
-
-@pytest.fixture(autouse=True)
-def _disable_real_llm_calls(monkeypatch):
-    """Keep the test suite deterministic, fast, and free of live network
-    calls / API cost by default - explanation generation (US-208) falls back
-    to its template path unless a test explicitly re-enables the Groq client
-    via monkeypatch. GROQ_API_KEY is loaded from .env at import time (see
-    src/api/database.py), so without this the whole suite would otherwise
-    hit the real Groq API on every /assess call."""
-    import src.api.services.explanation as explanation_module
-
-    monkeypatch.setattr(explanation_module, "_get_client", lambda: None)
+from src.api.models import Application
 
 
 @pytest.fixture
@@ -50,49 +37,11 @@ def complete_application(db_session):
         days_employed=-3650,
         days_birth=-14200,
         code_gender="F",
-        loan_scheme="Personal",
         status="COMPLETE",
-        # A genuinely complete profile (matches what "complete" now means
-        # post-Part-1: these are the model's strongest predictors, and a
-        # fixture missing them scores with low ML confidence by construction,
-        # not because the happy path is ambiguous).
-        ext_source_1=0.78,
-        ext_source_2=0.75,
-        ext_source_3=0.72,
-        cnt_fam_members=3,
-        amt_goods_price=280000,
-        cnt_children=1,
-        flag_own_car="Y",
-        flag_own_realty="Y",
-        # Segment values deliberately chosen to fall inside the fairness
-        # hard-block's <=5pp band (reports/ml/fairness_thresholds.json) so
-        # this "happy path" fixture exercises risk/policy/regulatory logic
-        # without incidentally tripping the (separately, directly tested)
-        # fairness_check kill-switch.
-        name_income_type="Commercial associate",
-        name_education_type="Secondary / secondary special",
-        name_family_status="Married",
-        region_rating_client=2,
-        occupation_type="Core staff",
     )
     db_session.add(application)
     db_session.commit()
     db_session.refresh(application)
-
-    # "Complete" spans documents too: seed the Personal scheme's required
-    # docs so tests exercising risk/policy/regulatory logic aren't
-    # incidentally blocked by the unrelated missing_documents kill-switch
-    # (US-301/302, wired into run_assessment in Part 4).
-    for doc_type in ["salary_slip", "bank_statement", "id_proof"]:
-        db_session.add(
-            Document(
-                application_id=application.id,
-                doc_type=doc_type,
-                filename=f"{doc_type}.pdf",
-                storage_path=f"/tmp/{doc_type}.pdf",
-            )
-        )
-    db_session.commit()
     return application
 
 

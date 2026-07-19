@@ -46,8 +46,6 @@ def _to_decision_record_out(record: DecisionRecord) -> DecisionRecordOut:
         underwriter_reason=record.underwriter_reason,
         underwriter_reason_code=record.underwriter_reason_code,
         underwriter_action_at=record.underwriter_action_at,
-        cost_usd=record.cost_usd,
-        record_hash=record.record_hash,
     )
 
 
@@ -152,7 +150,7 @@ def record_decision(
 
     record.underwriter_action = request.action
     record.underwriter_reason = request.reason
-    record.underwriter_reason_code = request.reason_code
+    record.underwriter_reason_code = request.reason_code if request.action == "override" else None
     record.underwriter_action_at = datetime.utcnow()
     record.underwriter_user_id = current_user.id
     db.commit()

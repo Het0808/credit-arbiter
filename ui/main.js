@@ -11,12 +11,6 @@ const alertBox = document.getElementById('alert-box');
 const logoutBtn = document.getElementById('logout-btn');
 const userInfo = document.getElementById('user-info');
 
-// Ops dashboard elements
-const showOpsBtn = document.getElementById('show-ops-btn');
-const opsBackBtn = document.getElementById('ops-back-btn');
-const opsView = document.getElementById('ops-view');
-const opsStatGrid = document.getElementById('ops-stat-grid');
-
 // Queue / detail / assess elements
 const queueView = document.getElementById('queue-view');
 const queueRows = document.getElementById('queue-rows');
@@ -29,21 +23,16 @@ const detailProfile = document.getElementById('detail-profile');
 const assessBtn = document.getElementById('assess-btn');
 const assessmentResult = document.getElementById('assessment-result');
 const escalationBanner = document.getElementById('escalation-banner');
-const resultRisk = document.getElementById('result-risk');
-const resultRiskFactors = document.getElementById('result-risk-factors');
-const resultScheme = document.getElementById('result-scheme');
-const resultClause = document.getElementById('result-clause');
-const resultPolicyRules = document.getElementById('result-policy-rules');
-const resultDocuments = document.getElementById('result-documents');
-const resultRegulatory = document.getElementById('result-regulatory');
-const resultFairness = document.getElementById('result-fairness');
-const resultExplanation = document.getElementById('result-explanation');
+const evRisk = document.getElementById('ev-risk');
+const evPolicy = document.getElementById('ev-policy');
+const evDocs = document.getElementById('ev-docs');
+const evRegulatory = document.getElementById('ev-regulatory');
+const evFairness = document.getElementById('ev-fairness');
 const resultRecommendation = document.getElementById('result-recommendation');
 const decisionControls = document.getElementById('decision-controls');
 const acceptBtn = document.getElementById('accept-btn');
 const showOverrideBtn = document.getElementById('show-override-btn');
 const overrideForm = document.getElementById('override-form');
-const overrideReasonCode = document.getElementById('override-reason-code');
 const overrideReason = document.getElementById('override-reason');
 const overrideReasonCode = document.getElementById('override-reason-code');
 const submitOverrideBtn = document.getElementById('submit-override-btn');
@@ -100,19 +89,11 @@ function showDashboard(email) {
 function showQueue() {
   queueView.classList.remove('hidden');
   detailView.classList.add('hidden');
-  opsView.classList.add('hidden');
 }
 
 function showDetail() {
   queueView.classList.add('hidden');
   detailView.classList.remove('hidden');
-  opsView.classList.add('hidden');
-}
-
-function showOps() {
-  queueView.classList.add('hidden');
-  detailView.classList.add('hidden');
-  opsView.classList.remove('hidden');
 }
 
 // Alerts
@@ -228,56 +209,6 @@ async function fetchQueue() {
   }
 }
 
-async function fetchMetrics() {
-  try {
-    const res = await fetch(`${API_BASE}/metrics`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    if (!res.ok) throw new Error('Failed to load ops metrics');
-    const metrics = await res.json();
-    renderMetrics(metrics);
-  } catch (error) {
-    showAlert(error.message);
-  }
-}
-
-function formatPercent(value) {
-  return value === null || value === undefined ? '-' : `${(value * 100).toFixed(1)}%`;
-}
-
-function renderMetrics(metrics) {
-  const recCounts = metrics.recommendation_counts || {};
-  const recSummary = Object.entries(recCounts).map(([k, v]) => `${k}: ${v}`).join(' &middot; ') || '-';
-
-  const cards = [
-    ['Throughput', metrics.throughput],
-    ['Recommendation Mix', recSummary],
-    ['Escalation Rate', formatPercent(metrics.escalation_rate)],
-    ['Acceptance Rate', formatPercent(metrics.acceptance_rate)],
-    ['Override Rate', formatPercent(metrics.override_rate)],
-    ['Avg Cost / Assessment', metrics.avg_cost_usd !== null ? `$${metrics.avg_cost_usd.toFixed(6)}` : '-'],
-    ['Avg Latency', metrics.avg_latency_ms !== null ? `${metrics.avg_latency_ms.toFixed(1)} ms` : '-'],
-    ['P95 Latency', metrics.p95_latency_ms !== null ? `${metrics.p95_latency_ms.toFixed(1)} ms` : '-'],
-    ['Cost Guardrail', `$${metrics.cost_guardrail_usd.toFixed(2)} / assessment`],
-    ['Fairness Hard-Block', `${metrics.fairness_hard_block_pp} pp`],
-    [
-      'Retrieval Failure Rate',
-      metrics.retrieval_failure_alert
-        ? `<span style="color:var(--error);font-weight:600">${formatPercent(metrics.retrieval_failure_rate)} (ALERT)</span>`
-        : formatPercent(metrics.retrieval_failure_rate),
-    ],
-  ];
-
-  opsStatGrid.innerHTML = cards
-    .map(([label, value]) => `
-      <div class="stat-card">
-        <div class="stat-label">${label}</div>
-        <div class="stat-value">${value}</div>
-      </div>
-    `)
-    .join('');
-}
-
 function renderQueue(applications) {
   queueRows.innerHTML = '';
   applications.forEach((application) => {
@@ -391,80 +322,56 @@ function renderAssessment(decision) {
 
   // 1 · Risk & factors (SHAP-style contributors)
   const bandClass = decision.risk_band ? `badge-${decision.risk_band.toLowerCase()}` : '';
-  resultRisk.innerHTML = decision.risk_score !== null && decision.risk_score !== undefined
-    ? `<span class="badge ${bandClass}">${decision.risk_band}</span>&nbsp; ${(decision.risk_score * 100).toFixed(1)}% probability of default`
-    : 'No risk score available';
+  let riskHtml = decision.risk_score != null
+    ? `<div><span class="badge ${bandClass}">${decision.risk_band}</span> &nbsp;${(decision.risk_score * 100).toFixed(1)}% PD`
+      + (ev.model_confidence != null ? ` · confidence ${(ev.model_confidence * 100).toFixed(0)}%` : '') + `</div>`
+    : '<div>No risk score available</div>';
+  if (Array.isArray(ev.risk_factors) && ev.risk_factors.length) {
+    riskHtml += '<ul class="factor-list">' + ev.risk_factors.map((f) =>
+      `<li><span class="factor-dir factor-${f.direction === 'increases_risk' ? 'up' : 'down'}">${f.direction === 'increases_risk' ? '▲' : '▼'}</span> ${escapeHtml(f.label)} <span class="factor-val">${f.contribution}</span></li>`
+    ).join('') + '</ul>';
+  }
+  evRisk.innerHTML = riskHtml;
 
-  const riskFactors = decision.evidence_chain?.risk_factors || [];
-  resultRiskFactors.innerHTML = riskFactors.length
-    ? riskFactors.map((factor) => {
-        const direction = factor.impact >= 0 ? 'factor-up' : 'factor-down';
-        const arrow = factor.impact >= 0 ? '&uarr;' : '&darr;';
-        return `
-          <div class="risk-factor ${direction}">
-            <span class="risk-factor-arrow">${arrow}</span>
-            <span class="risk-factor-label">${factor.label}</span>
-            <span class="risk-factor-value">${typeof factor.value === 'number' ? factor.value.toFixed(2) : factor.value ?? '-'}</span>
-          </div>
-        `;
-      }).join('')
-    : '<span>No risk factors available</span>';
+  // 2 · Policy clauses (clickable citations -> source_id + version)
+  const clauses = ev.policy_clauses || [];
+  if (clauses.length) {
+    evPolicy.innerHTML = clauses.map((c) =>
+      `<button class="citation" data-clause="${escapeHtml(c.clause_id)}" data-version="${escapeHtml(c.corpus_version || '')}">${escapeHtml(c.clause_id)} <span class="citation-ver">${escapeHtml(c.corpus_version || '')}</span></button>`
+    ).join('')
+    + `<div class="evidence-meta">Adherence: ${((ev.policy_adherence ?? 1) * 100).toFixed(0)}%`
+    + (ev.policy_failed_rules && ev.policy_failed_rules.length ? ` · failed: ${ev.policy_failed_rules.map((r) => r.clause_id).join(', ')}` : '') + `</div>`;
+  } else {
+    evPolicy.innerHTML = '<span class="evidence-empty">No policy clause retrieved (retrieval failed)</span>';
+  }
 
-  const ev = decision.evidence_chain || {};
+  // 3 · Documents
+  const docs = ev.document_findings;
+  if (docs) {
+    const missing = docs.missing_information || [];
+    const findings = docs.consistency_findings || [];
+    evDocs.innerHTML =
+      `<div>${docs.verified ? '<span class="badge badge-low">Verified</span>' : '<span class="badge badge-medium">Needs review</span>'} · ${docs.document_count ?? 0} document(s)</div>`
+      + (missing.length ? `<div class="evidence-meta">Missing: ${missing.map(escapeHtml).join(', ')}</div>` : '')
+      + (findings.length ? `<div class="evidence-meta">Findings: ${findings.map((f) => escapeHtml(f.type)).join(', ')}</div>` : '');
+  } else {
+    evDocs.innerHTML = '<span class="evidence-empty">No document report</span>';
+  }
 
-  resultScheme.textContent = ev.loan_scheme || '-';
+  // 4 · Regulatory (per-check breakdown)
+  const checks = ev.regulatory_checks || [];
+  evRegulatory.innerHTML =
+    `<div><span class="badge badge-${(decision.regulatory_status || '').toLowerCase() === 'pass' ? 'low' : 'high'}">${decision.regulatory_status || '-'}</span></div>`
+    + (checks.length ? '<div class="check-grid">' + checks.map((c) =>
+        `<span class="check-chip check-${c.status.toLowerCase().includes('pass') ? 'ok' : 'bad'}">${escapeHtml(c.check)}: ${escapeHtml(c.status)}</span>`
+      ).join('') + '</div>' : '')
+    + (ev.regulatory_reason ? `<div class="evidence-meta">${escapeHtml(ev.regulatory_reason)}</div>` : '');
 
-  const allClauses = ev.retrieved_clauses && ev.retrieved_clauses.length
-    ? ev.retrieved_clauses
-    : (decision.retrieved_clause_id
-        ? [{ clause_id: decision.retrieved_clause_id, title: '', text: decision.retrieved_clause_text, score: decision.retrieval_confidence }]
-        : []);
-  resultClause.innerHTML = allClauses.length
-    ? allClauses.map((c) => `
-        <div class="clause-item">
-          <div class="clause-title">${c.clause_id}${c.title ? ' &mdash; ' + c.title : ''}</div>
-          <div class="clause-text">${c.text || ''}</div>
-          <div class="clause-meta">Confidence: ${((c.score || 0) * 100).toFixed(1)}%</div>
-        </div>
-      `).join('')
-    : '<span>No policy clause retrieved (retrieval failed)</span>';
-
-  const passedRules = ev.policy_passed_rules || [];
-  const failedRules = ev.policy_failed_rules || [];
-  resultPolicyRules.innerHTML = (passedRules.length + failedRules.length)
-    ? [
-        ...passedRules.map((r) => `<div class="rule-item rule-pass">&check; ${r.rule}: ${r.detail}</div>`),
-        ...failedRules.map((r) => `<div class="rule-item rule-fail">&cross; ${r.rule}: ${r.detail}</div>`),
-      ].join('')
-    : '<span>No scheme-specific numeric rules evaluated</span>';
-
-  const docVerification = ev.document_verification;
-  resultDocuments.innerHTML = docVerification
-    ? `
-        <div class="doc-status ${docVerification.complete ? 'doc-ok' : 'doc-missing'}">
-          ${docVerification.complete ? 'All required documents present' : 'Missing: ' + docVerification.missing_documents.join(', ')}
-        </div>
-        <div class="doc-status ${docVerification.consistent ? 'doc-ok' : 'doc-missing'}">
-          ${docVerification.consistent ? 'No consistency issues found' : 'Consistency findings: ' + docVerification.consistency_findings.join(', ')}
-        </div>
-      `
-    : '<span>-</span>';
-
-  const subChecks = ev.regulatory_sub_checks || {};
-  const subCheckKeys = Object.keys(subChecks);
-  resultRegulatory.innerHTML = `
-    <span class="badge badge-${(decision.regulatory_status || '').toLowerCase() === 'pass' ? 'approve' : 'decline'}">${decision.regulatory_status || '-'}</span>
-    ${subCheckKeys.length ? '<div class="sub-check-list">' + subCheckKeys.map((k) => `<span class="sub-check-item">${k}: ${subChecks[k]}</span>`).join('') + '</div>' : ''}
-  `;
-
-  const triggeredSegments = ev.fairness_triggered_segments || [];
-  resultFairness.innerHTML = ev.fairness_alert
-    ? `<div class="fairness-alert">Fairness alert: ${triggeredSegments.map((s) => `${s.attribute}=${s.subgroup} (${s.delta_pp > 0 ? '+' : ''}${s.delta_pp}pp)`).join(', ')}</div>`
-    : '<span>No fairness gap exceeding the 5pp guardrail</span>';
-
-  resultExplanation.innerHTML = ev.narrative_explanation
-    ? `<p>${ev.narrative_explanation}</p><div class="clause-meta">Source: ${ev.explanation_source}${ev.explanation_cost_usd ? ' &middot; $' + ev.explanation_cost_usd.toFixed(6) : ''}</div>`
-    : '<span>-</span>';
+  // 5 · Fairness
+  const fair = ev.fairness_result || {};
+  evFairness.innerHTML = fair.scheme_paused
+    ? `<span class="badge badge-high">Scheme paused (fairness hard-block)</span>`
+    : `<span class="badge badge-low">No active fairness block</span> <span class="evidence-meta">${escapeHtml(fair.scheme || '')}</span>`;
 
   const recommendationClass = `badge-${decision.recommendation.toLowerCase()}`;
   resultRecommendation.innerHTML = `<span class="badge ${recommendationClass}">${decision.recommendation}</span>`;
@@ -472,6 +379,24 @@ function renderAssessment(decision) {
   evPolicy.querySelectorAll('.citation').forEach((btn) => {
     btn.addEventListener('click', () => openClause(btn.dataset.clause, btn.dataset.version));
   });
+}
+
+async function openClause(clauseId, version) {
+  try {
+    const q = version ? `?corpus_version=${encodeURIComponent(version)}` : '';
+    const res = await fetch(`${API_BASE}/policy/clause/${encodeURIComponent(clauseId)}${q}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Clause not found');
+    const clause = await res.json();
+    clauseModalBody.innerHTML =
+      `<div class="clause-title">${escapeHtml(clause.clause_id)} <span class="citation-ver">${escapeHtml(clause.corpus_version)}</span></div>`
+      + `<div class="clause-scheme">${escapeHtml(clause.scheme)} — ${escapeHtml(clause.title)}</div>`
+      + `<div class="clause-text">${escapeHtml(clause.text)}</div>`;
+    clauseModal.classList.remove('hidden');
+  } catch (error) {
+    showAlert(error.message);
+  }
 }
 
 async function handleDecision(action, reason, reasonCode) {
@@ -516,8 +441,6 @@ logoutBtn.addEventListener('click', () => {
 });
 
 backToQueueBtn.addEventListener('click', () => { showQueue(); fetchQueue(); });
-showOpsBtn.addEventListener('click', () => { showOps(); fetchMetrics(); });
-opsBackBtn.addEventListener('click', () => { showQueue(); fetchQueue(); });
 assessBtn.addEventListener('click', handleAssess);
 acceptBtn.addEventListener('click', () => handleDecision('accept'));
 showOverrideBtn.addEventListener('click', () => {
@@ -527,11 +450,83 @@ showOverrideBtn.addEventListener('click', () => {
 submitOverrideBtn.addEventListener('click', () => {
   const reason = overrideReason.value.trim();
   const reasonCode = overrideReasonCode.value;
+  if (!reasonCode) {
+    showAlert('A reason code is required to override a recommendation');
+    return;
+  }
   if (!reason) {
     showAlert('A reason is required to override a recommendation');
     return;
   }
   handleDecision('override', reason, reasonCode);
+});
+
+clauseModalClose.addEventListener('click', () => clauseModal.classList.add('hidden'));
+clauseModal.addEventListener('click', (e) => {
+  if (e.target === clauseModal) clauseModal.classList.add('hidden');
+});
+
+// --- Ops dashboard (US-407) ---
+const opsToggleBtn = document.getElementById('ops-toggle-btn');
+const opsPanel = document.getElementById('ops-panel');
+const opsKpis = document.getElementById('ops-kpis');
+const opsAlerts = document.getElementById('ops-alerts');
+const killSwitchInput = document.getElementById('kill-switch-input');
+
+const fmtPct = (v) => (v == null ? '—' : `${(v * 100).toFixed(0)}%`);
+const fmtUsd = (v) => (v == null ? '—' : `$${Number(v).toFixed(4)}`);
+const fmtNum = (v, unit = '') => (v == null ? '—' : `${v}${unit}`);
+
+async function loadDashboard() {
+  try {
+    const [dashRes, ksRes] = await Promise.all([
+      fetch(`${API_BASE}/ops/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch(`${API_BASE}/ops/kill-switch`, { headers: { 'Authorization': `Bearer ${token}` } }),
+    ]);
+    if (!dashRes.ok) throw new Error('Failed to load dashboard');
+    const dash = await dashRes.json();
+    const ks = await ksRes.json();
+    killSwitchInput.checked = !!ks.active;
+
+    const k = dash.kpis;
+    const tiles = [
+      ['Throughput', fmtNum(k.throughput_decisions), `${k.window_days}d`],
+      ['P95 latency', fmtNum(k.p95_latency_s, ' s'), `≤ ${dash.thresholds.p95_latency_s}s`],
+      ['Cost / app', fmtUsd(k.cost_per_app_usd), `≤ $${dash.thresholds.cost_per_app_usd}`],
+      ['Acceptance', fmtPct(k.acceptance_rate), `≥ ${fmtPct(dash.thresholds.acceptance_rate_min)}`],
+      ['Override rate', fmtPct(k.override_rate), ''],
+      ['Fairness gap', fmtNum(k.fairness_gap_pp, ' pp'), `≤ ${dash.thresholds.fairness_gap_pp}pp`],
+    ];
+    opsKpis.innerHTML = tiles.map(([label, val, sub]) =>
+      `<div class="kpi-tile"><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`
+    ).join('');
+
+    if (dash.alerts && dash.alerts.length) {
+      opsAlerts.innerHTML = dash.alerts.map((a) => `<div>⚠ ${escapeHtml(a)}</div>`).join('');
+      opsAlerts.classList.remove('hidden');
+    } else {
+      opsAlerts.classList.add('hidden');
+    }
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+opsToggleBtn.addEventListener('click', () => {
+  opsPanel.classList.toggle('hidden');
+  if (!opsPanel.classList.contains('hidden')) loadDashboard();
+});
+
+killSwitchInput.addEventListener('change', async () => {
+  try {
+    await fetch(`${API_BASE}/ops/kill-switch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ active: killSwitchInput.checked }),
+    });
+  } catch (error) {
+    showAlert(error.message);
+  }
 });
 
 // Start
