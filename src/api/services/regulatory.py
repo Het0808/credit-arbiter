@@ -11,8 +11,14 @@ surfaces escalate_for_review rather than guessing PASS or FAIL.
 import hashlib
 import time
 
-MAX_RETRIES = 2
-RETRY_BACKOFF_SECONDS = 0.05
+# Four checks run sequentially, each with up to MAX_RETRIES exponential-backoff
+# retries; the base is kept small so the worst case (all checks down) still lands
+# well inside the 500ms regulatory latency budget: 4 x (0.01+0.02+0.04) = 0.28s.
+MAX_RETRIES = 3
+BASE_BACKOFF_SECONDS = 0.01
+
+CHECKS = ("identity", "employment", "tax", "sanctions")
+
 
 SUB_CHECKS = ["identity", "employment", "tax", "sanctions"]
 
