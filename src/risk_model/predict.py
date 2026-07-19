@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Union, List, Dict, Any
 import numpy as np
 import pandas as pd
+from src.risk_model.aux_features import merge_aux_features
 from src.risk_model.config import ModelConfig
 from src.risk_model.preprocess import (
     load_raw_data,
@@ -161,8 +162,9 @@ def run_applicant_inference(
     
     if applicant_df.empty:
         raise ValueError(f"Application ID {application_id} not found in raw dataset.")
-        
-    # 3. Apply feature engineering
+
+    # 3. Merge auxiliary aggregates (US-201) then apply feature engineering.
+    applicant_df = merge_aux_features(applicant_df)
     X, _, _ = prepare_pipeline_data(applicant_df, config)
     
     # 4. Predict probability

@@ -45,13 +45,12 @@ def test_preprocess_data_loading_and_preparation():
         if col in df.columns:
             assert col in X.columns
             
-    # Verify engineered features exist in X
+    # Verify engineered features exist in X (AGE_YEARS excluded - see fairness test)
     engineered_cols = [
         "CREDIT_INCOME_RATIO",
         "ANNUITY_INCOME_RATIO",
         "CREDIT_ANNUITY_RATIO",
         "CREDIT_GOODS_RATIO",
-        "AGE_YEARS",
         "EMPLOYMENT_YEARS",
         "CHILDREN_RATIO",
         "INCOME_PER_PERSON",
@@ -65,6 +64,18 @@ def test_preprocess_data_loading_and_preparation():
     ]
     for col in engineered_cols:
         assert col in X.columns
+
+
+def test_protected_features_are_excluded_from_model_inputs():
+    """US-201 AC / A-8b: CODE_GENDER, DAYS_BIRTH, and the AGE_YEARS proxy must
+    never appear in the model feature matrix."""
+    config = ModelConfig()
+    df = load_raw_data()
+    X, _, _ = prepare_pipeline_data(df, config)
+    for banned in ("CODE_GENDER", "DAYS_BIRTH", "AGE_YEARS"):
+        assert banned not in X.columns
+        assert banned not in config.NUMERICAL_FEATURES
+        assert banned not in config.CATEGORICAL_FEATURES
 
 
 def test_preprocess_splitting_and_transformer():
@@ -120,6 +131,9 @@ def test_explainability_attribution():
         assert "feature" in driver
         assert "value" in driver
         assert "impact" in driver
+        # US-202: each contributor carries a human-readable label + risk direction.
+        assert "label" in driver and driver["label"]
+        assert driver["direction"] in {"increases_risk", "decreases_risk"}
 
 
 def test_risk_scoring_underwriting_tool():

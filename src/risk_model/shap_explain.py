@@ -15,12 +15,92 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from src.risk_model.aux_features import merge_aux_features
 from src.risk_model.config import ModelConfig
 from src.risk_model.preprocess import (
     load_raw_data,
     prepare_pipeline_data,
     split_data,
 )
+
+
+# US-202: human-readable labels for model features shown to underwriters.
+FEATURE_LABELS = {
+    "AMT_INCOME_TOTAL": "Annual income",
+    "AMT_CREDIT": "Requested credit amount",
+    "AMT_ANNUITY": "Loan annuity",
+    "AMT_GOODS_PRICE": "Goods price",
+    "DAYS_EMPLOYED": "Employment duration",
+    "EMPLOYMENT_YEARS": "Years employed",
+    "CNT_FAM_MEMBERS": "Family size",
+    "CNT_CHILDREN": "Number of children",
+    "CREDIT_INCOME_RATIO": "Loan-to-income ratio",
+    "ANNUITY_INCOME_RATIO": "Debt-to-income ratio",
+    "CREDIT_ANNUITY_RATIO": "Credit-to-annuity ratio",
+    "CREDIT_GOODS_RATIO": "Credit-to-goods ratio",
+    "CHILDREN_RATIO": "Children-to-family ratio",
+    "INCOME_PER_PERSON": "Income per household member",
+    "EXT_SOURCE_1": "External credit score 1",
+    "EXT_SOURCE_2": "External credit score 2",
+    "EXT_SOURCE_3": "External credit score 3",
+    "EXT_SOURCE_MEAN": "External credit score (avg)",
+    "EXT_SOURCE_STD": "External credit score (spread)",
+    "EXT_SOURCE_MAX": "External credit score (best)",
+    "EXT_SOURCE_MIN": "External credit score (worst)",
+    "TOTAL_MISSING_VALUES": "Number of missing fields",
+    "MISSING_PERCENTAGE": "Share of missing fields",
+    "TOTAL_DOCUMENT_FLAGS": "Documents provided",
+    "BUREAU_LOAN_COUNT": "Credit-bureau loan count",
+    "BUREAU_ACTIVE_COUNT": "Active bureau loans",
+    "BUREAU_AMT_CREDIT_SUM_MEAN": "Avg bureau credit amount",
+    "BUREAU_AMT_CREDIT_SUM_DEBT_SUM": "Total bureau debt",
+    "BUREAU_CREDIT_DAY_OVERDUE_MEAN": "Avg days overdue (bureau)",
+    "BUREAU_CREDIT_DAY_OVERDUE_MAX": "Max days overdue (bureau)",
+    "BUREAU_DAYS_CREDIT_MEAN": "Avg bureau credit recency",
+    "PREV_APP_COUNT": "Previous applications",
+    "PREV_APP_APPROVED_RATIO": "Previous approval rate",
+    "PREV_APP_REFUSED_COUNT": "Previous refusals",
+    "PREV_AMT_APPLICATION_MEAN": "Avg previous requested amount",
+    "PREV_AMT_CREDIT_MEAN": "Avg previous credit amount",
+    "PREV_DAYS_DECISION_MAX": "Most recent previous decision",
+    "INST_COUNT": "Instalments paid (history)",
+    "INST_DPD_MEAN": "Avg instalment days late",
+    "INST_DPD_MAX": "Worst instalment days late",
+    "INST_LATE_COUNT": "Late instalments",
+    "INST_PAYMENT_RATIO_MEAN": "Avg payment coverage ratio",
+    "POS_COUNT": "POS/cash balance records",
+    "POS_SK_DPD_MEAN": "Avg POS days past due",
+    "POS_SK_DPD_MAX": "Worst POS days past due",
+    "CC_COUNT": "Credit-card balance records",
+    "CC_AMT_BALANCE_MEAN": "Avg credit-card balance",
+    "CC_UTILIZATION_MEAN": "Avg credit-card utilisation",
+    "CC_SK_DPD_MAX": "Worst credit-card days past due",
+    "NAME_CONTRACT_TYPE": "Contract type",
+    "FLAG_OWN_CAR": "Owns a car",
+    "FLAG_OWN_REALTY": "Owns real estate",
+    "NAME_INCOME_TYPE": "Income type",
+    "NAME_EDUCATION_TYPE": "Education level",
+}
+
+
+def _humanize(feature_col: str) -> str:
+    """Turn a transformer column name (e.g. 'num__EXT_SOURCE_MEAN') into a label."""
+    raw = feature_col.split("__")[-1]
+    # One-hot columns look like NAME_EDUCATION_TYPE_Higher education.
+    for base, label in FEATURE_LABELS.items():
+        if raw == base:
+            return label
+        if raw.startswith(base + "_"):
+            return f"{label}: {raw[len(base) + 1:]}"
+    return raw.replace("_", " ").title()
+
+
+def _label_drivers(drivers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Attach a human-readable label and risk direction to each SHAP driver (US-202)."""
+    for d in drivers:
+        d["label"] = _humanize(d["feature"])
+        d["direction"] = "increases_risk" if d["impact"] > 0 else "decreases_risk"
+    return drivers
 
 
 def get_attribution_explanation(
@@ -54,9 +134,10 @@ def get_attribution_explanation(
     preprocessor = pipeline.named_steps["preprocessor"]
     classifier = pipeline.named_steps["classifier"]
     
-    # Load and preprocess dataset
+    # Load and preprocess dataset (with auxiliary aggregates - US-201)
     print("Loading data for explainability analysis...")
     df = load_raw_data()
+    df = merge_aux_features(df)
     X, y, application_ids = prepare_pipeline_data(df, config)
     
     # Ensure application_id exists
@@ -142,8 +223,8 @@ def get_attribution_explanation(
                 
             # Sort by absolute SHAP impact descending
             feature_impacts.sort(key=lambda x: abs(x["impact"]), reverse=True)
-            top_drivers = feature_impacts[:5]
-            
+            top_drivers = _label_drivers(feature_impacts[:5])
+
             explanation = {
                 "application_id": int(application_id),
                 "top_risk_drivers": top_drivers
@@ -206,7 +287,7 @@ def get_attribution_explanation(
             
         # Sort by absolute local impact descending
         local_impacts.sort(key=lambda x: abs(x["impact"]), reverse=True)
-        top_drivers = local_impacts[:5]
+        top_drivers = _label_drivers(local_impacts[:5])
         
         # Generate custom sample waterfall plot
         print(f"Generating custom waterfall plot for applicant {application_id}...")

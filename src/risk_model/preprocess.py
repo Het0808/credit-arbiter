@@ -156,9 +156,16 @@ def prepare_pipeline_data(
     """
     # 1. Clean raw data
     df_cleaned = clean_data(df)
-    
+
     # 2. Engineer features
     df_engineered = engineer_features(df_cleaned)
+
+    # 2b. Merge auxiliary-table aggregates (US-201). Idempotent and a no-op if
+    # already merged or if the ID column is absent, so every caller that builds
+    # X gets the exact feature set the production model expects.
+    from src.risk_model.aux_features import merge_aux_features
+
+    df_engineered = merge_aux_features(df_engineered)
 
     # Retrieve all configured feature columns from config.py
     selected_numeric = list(config.NUMERICAL_FEATURES)
