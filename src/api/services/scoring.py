@@ -33,11 +33,13 @@ def _employment_tenure_years(days_employed) -> float:
     return abs(days_employed) / 365.25
 
 
-def score_application(profile: dict) -> tuple[float, str]:
-    """Return (probability_of_default, risk_band) for a normalised applicant profile.
+def _weighted_contributions(profile: dict) -> dict:
+    """Return each risk driver's weighted contribution to the score.
 
-    Only reads amt_income_total, amt_credit, amt_annuity, days_employed.
-    Never reads code_gender or days_birth.
+    The single source of truth for the scoring math, shared by score_application
+    (which sums it) and explain_score (which labels it). Only reads
+    amt_income_total, amt_credit, amt_annuity, days_employed - never
+    code_gender or days_birth.
     """
     income = profile.get("amt_income_total")
     credit = profile.get("amt_credit")
@@ -53,12 +55,16 @@ def score_application(profile: dict) -> tuple[float, str]:
     lti = credit / income
     tenure_years = _employment_tenure_years(days_employed)
 
-    risk = (
-        DTI_WEIGHT * _clamp(dti / DTI_SCALE)
-        + LTI_WEIGHT * _clamp(lti / LTI_SCALE)
-        + TENURE_WEIGHT * _clamp(1 - tenure_years / TENURE_SCALE_YEARS)
-    )
-    probability = round(_clamp(risk), 4)
+    return {
+        "dti": DTI_WEIGHT * _clamp(dti / DTI_SCALE),
+        "lti": LTI_WEIGHT * _clamp(lti / LTI_SCALE),
+        "employment_tenure": TENURE_WEIGHT * _clamp(1 - tenure_years / TENURE_SCALE_YEARS),
+    }
+
+
+def score_application(profile: dict) -> tuple[float, str]:
+    """Return (probability_of_default, risk_band) for a normalised applicant profile."""
+    probability = round(_clamp(sum(_weighted_contributions(profile).values())), 4)
 
     if probability < LOW_BAND_MAX:
         band = "Low"
@@ -68,3 +74,38 @@ def score_application(profile: dict) -> tuple[float, str]:
         band = "High"
 
     return probability, band
+
+
+# Human-readable labels for the scorer's three risk drivers.
+_FACTOR_LABELS = {
+    "dti": "Debt-to-income ratio",
+    "lti": "Loan-to-income ratio",
+    "employment_tenure": "Employment tenure",
+}
+
+
+def explain_score(profile: dict) -> list[dict]:
+    """Return the scorer's top risk factors with weighted contribution + direction.
+
+    A lightweight, always-available stand-in for model SHAP values on the
+    rule-based scorer, so the evidence chain (US-307) always has a risk-factor
+    component. Contribution = weight * clamped-normalised metric; higher means
+    the factor pushed the score toward higher risk. Shares the exact scoring
+    math with score_application via _weighted_contributions.
+    """
+    try:
+        contributions = _weighted_contributions(profile)
+    except (ValueError, TypeError):
+        return []
+
+    factors = [
+        {
+            "factor": key,
+            "label": _FACTOR_LABELS[key],
+            "contribution": round(value, 4),
+            "direction": "increases_risk" if value > 0 else "decreases_risk",
+        }
+        for key, value in contributions.items()
+    ]
+    factors.sort(key=lambda f: f["contribution"], reverse=True)
+    return factors
