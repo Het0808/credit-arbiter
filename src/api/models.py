@@ -25,6 +25,7 @@ class Application(Base):
     id = Column(Integer, primary_key=True, index=True)
     external_id = Column(String, unique=True, index=True, nullable=False)
     name_contract_type = Column(String, nullable=True)
+    loan_scheme = Column(String, nullable=True, default="Personal Loan")
     amt_income_total = Column(Float, nullable=True)
     amt_credit = Column(Float, nullable=True)
     amt_annuity = Column(Float, nullable=True)
@@ -77,6 +78,8 @@ class DecisionRecord(Base):
     retrieved_clause_text = Column(Text, nullable=True)
     retrieval_confidence = Column(Float, nullable=True)
     retrieval_failed = Column(Boolean, default=False)
+    policy_version = Column(String, nullable=True)  # corpus version used (US-207)
+    loan_scheme = Column(String, nullable=True)
 
     regulatory_status = Column(String, nullable=True)
 

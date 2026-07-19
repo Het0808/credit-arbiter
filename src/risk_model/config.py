@@ -71,6 +71,7 @@ class ModelConfig:
     ]
 
     CATEGORICAL_FEATURES: List[str] = [
+        # CODE_GENDER excluded - protected attribute (A-8b)
         "NAME_CONTRACT_TYPE",
         "FLAG_OWN_CAR",
         "FLAG_OWN_REALTY",

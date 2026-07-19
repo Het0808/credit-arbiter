@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, Any
 import numpy as np
 import pandas as pd
+from src.risk_model.aux_features import merge_aux_features
 from src.risk_model.config import ModelConfig
 from src.risk_model.preprocess import clean_data, engineer_features
 
