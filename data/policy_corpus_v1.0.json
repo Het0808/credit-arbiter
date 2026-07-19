@@ -1,191 +1,147 @@
 {
-  "corpus_version": "v1.0",
-  "effective_date": "2026-07-16",
-  "supersedes": "policy_corpus_personal_loan_v0.1.json",
-  "description": "Halcyon Credit multi-scheme synthetic policy rulebook (US-203). Covers all six supported loan schemes. Every clause carries a stable clause_id (used as its source_id in retrieval and explanations) and, where the rule is machine-evaluable, a structured `rule` object consumed by the policy evaluation engine (US-206). Rules are synthetic and for POC use only.",
-  "schemes": [
-    "Personal Loan",
-    "Education Loan",
-    "Vehicle Loan",
-    "Business Loan",
-    "First-Time Buyer Loan",
-    "Low-Income Loan"
-  ],
-  "rule_metric_glossary": {
-    "dti": "Debt-to-Income = amt_annuity / amt_income_total (annualised, both figures annual).",
-    "lti": "Loan-to-Income = amt_credit / amt_income_total.",
-    "annual_income": "amt_income_total (verified annual income).",
-    "employment_months": "abs(days_employed)/30.44; the HC2018 positive sentinel (>=0, e.g. 365243) means unemployed/pensioner => 0 months.",
-    "region_rating": "region_rating_client (1 best .. 3 worst).",
-    "thin_file": "True when employment_months < 24 or the employment sentinel is present."
-  },
+  "version": "v1.0",
+  "effective_date": "2026-07-08",
+  "schemes": ["Personal", "Education", "Vehicle", "Business", "First-Time Borrower", "Low-Income Assistance"],
   "clauses": [
     {
       "clause_id": "POL-PL-001",
-      "scheme": "Personal Loan",
-      "title": "Personal Loan Debt-to-Income (DTI) Threshold",
-      "text": "Debt-to-Income (DTI) ratio, calculated as the applicant's loan annuity divided by income, must not exceed 50% for Personal Loan approval. Applications with a DTI ratio above this threshold cannot be auto-approved and require referral to a human underwriter or an outright decline based on compensating factors.",
-      "tags": ["dti", "debt-to-income", "affordability", "annuity", "income", "personal loan"],
-      "rule": {"metric": "dti", "operator": "<=", "threshold": 0.50, "on_violation": "refer"}
+      "scheme": "Personal",
+      "title": "Debt-to-Income (DTI) Threshold",
+      "text": "Debt-to-Income (DTI) ratio, calculated as the applicant's monthly loan annuity divided by monthly income, must not exceed 50% for Personal Loan approval. Applications with a DTI ratio above this threshold cannot be auto-approved and require referral to a human underwriter or an outright decline based on compensating factors.",
+      "tags": ["dti", "debt-to-income", "affordability", "annuity", "income"]
     },
     {
       "clause_id": "POL-PL-002",
-      "scheme": "Personal Loan",
-      "title": "Personal Loan Minimum Income Requirement",
+      "scheme": "Personal",
+      "title": "Minimum Income Requirement",
       "text": "Applicants for a Personal Loan must demonstrate a minimum verified annual income of $15,000 (or local currency equivalent). Applications where verified income falls below this minimum income floor cannot be approved and must be referred for manual underwriting review.",
-      "tags": ["minimum income", "income floor", "verified income", "eligibility", "personal loan"],
-      "rule": {"metric": "annual_income", "operator": ">=", "threshold": 15000, "on_violation": "refer"}
+      "tags": ["minimum income", "income floor", "verified income", "eligibility"]
     },
     {
       "clause_id": "POL-PL-003",
-      "scheme": "Personal Loan",
-      "title": "Personal Loan Loan-to-Income (LTI) Cap",
+      "scheme": "Personal",
+      "title": "Loan-to-Income (LTI) Cap",
       "text": "The total requested credit amount must not exceed 6 times the applicant's verified annual income (a Loan-to-Income, or LTI, cap of 6.0x) for Personal Loan products. Requests exceeding this cap require additional collateral, a co-signer, or explicit human underwriter override before approval.",
-      "tags": ["loan-to-income", "lti", "credit amount", "cap", "collateral", "personal loan"],
-      "rule": {"metric": "lti", "operator": "<=", "threshold": 6.0, "on_violation": "refer"}
+      "tags": ["loan-to-income", "lti", "credit amount", "cap", "collateral"]
     },
     {
       "clause_id": "POL-PL-004",
-      "scheme": "Personal Loan",
-      "title": "Personal Loan Thin-File Escalation Rule",
-      "text": "Applicants with fewer than 24 months of employment history, no prior credit bureau record, or an unemployment/pension sentinel value in the employment-duration field are classified as thin-file. Thin-file Personal Loan applications must be escalated to a human underwriter for manual review regardless of the model-predicted risk score or band.",
-      "tags": ["thin-file", "employment history", "escalation", "unemployed", "pensioner", "bureau record", "personal loan"],
-      "rule": {"metric": "thin_file", "operator": "==", "threshold": false, "on_violation": "escalate"}
+      "scheme": "Personal",
+      "title": "Thin-File Escalation Rule",
+      "text": "Applicants with fewer than 24 months of employment history, no prior credit bureau record, or an unemployment/pension sentinel value in the employment-duration field are classified as thin-file. Thin-file applications must be escalated to a human underwriter for manual review regardless of the model-predicted risk score or band.",
+      "tags": ["thin-file", "employment history", "escalation", "unemployed", "pensioner", "bureau record"]
     },
     {
       "clause_id": "POL-PL-005",
-      "scheme": "Personal Loan",
-      "title": "Fairness Guardrail (All Schemes)",
-      "text": "No recommendation may be based on, or materially influenced by, an applicant's gender, age, marital status, or other protected characteristic. Any model feature or policy rule found to correlate with a protected attribute above the fairness guardrail threshold must be excluded from automated decisioning and flagged for fairness audit before it can be used. This guardrail applies across every loan scheme.",
-      "tags": ["fairness", "protected characteristic", "gender", "age", "bias", "guardrail", "all schemes"]
+      "scheme": "Personal",
+      "title": "Fairness Guardrail",
+      "text": "No recommendation may be based on, or materially influenced by, an applicant's gender, age, marital status, or other protected characteristic. Any model feature or policy rule found to correlate with a protected attribute above the fairness guardrail threshold must be excluded from automated decisioning and flagged for fairness audit before it can be used.",
+      "tags": ["fairness", "protected characteristic", "gender", "age", "bias", "guardrail"]
     },
     {
       "clause_id": "POL-ED-001",
-      "scheme": "Education Loan",
-      "title": "Education Loan Affordability (DTI) Threshold",
-      "text": "For Education Loan products, projected Debt-to-Income (DTI) after disbursement must not exceed 40%, reflecting that borrowers are frequently students with limited current earnings. Applications exceeding a 40% DTI must be referred for manual assessment of the co-applicant's capacity.",
-      "tags": ["dti", "affordability", "education loan", "student", "co-applicant"],
-      "rule": {"metric": "dti", "operator": "<=", "threshold": 0.40, "on_violation": "refer"}
+      "scheme": "Education",
+      "title": "Education Loan Debt-to-Income Threshold",
+      "text": "Debt-to-Income (DTI) ratio for Education Loan applicants must not exceed 45%. Because education loans finance future earning potential rather than current consumption, a co-signer's income may be blended into the DTI calculation when the primary applicant is a full-time student with limited current income.",
+      "tags": ["dti", "education", "student", "co-signer", "affordability"]
     },
     {
       "clause_id": "POL-ED-002",
-      "scheme": "Education Loan",
-      "title": "Education Loan Loan-to-Income (LTI) Allowance",
-      "text": "Education Loans permit a higher Loan-to-Income allowance of up to 8.0x verified annual income (of the borrower or co-applicant), recognising the deferred-earnings profile of education financing. Requests above 8.0x LTI require a co-signer or manual underwriter override.",
-      "tags": ["loan-to-income", "lti", "education loan", "co-signer", "deferred earnings"],
-      "rule": {"metric": "lti", "operator": "<=", "threshold": 8.0, "on_violation": "refer"}
+      "scheme": "Education",
+      "title": "Enrollment Verification Requirement",
+      "text": "Education Loan applications must include verified proof of enrollment or admission at an accredited institution. Applications missing enrollment verification are treated as a missing-information gap and must be escalated for manual document review before any recommendation is issued.",
+      "tags": ["enrollment", "verification", "student", "accredited institution", "missing information"]
     },
     {
       "clause_id": "POL-ED-003",
-      "scheme": "Education Loan",
-      "title": "Education Loan Minimum Household Income",
-      "text": "The verified household or co-applicant annual income supporting an Education Loan must be at least $12,000. Below this floor the application cannot be auto-approved and must be referred for manual review of repayment capacity.",
-      "tags": ["minimum income", "household income", "education loan", "co-applicant", "eligibility"],
-      "rule": {"metric": "annual_income", "operator": ">=", "threshold": 12000, "on_violation": "refer"}
-    },
-    {
-      "clause_id": "POL-ED-004",
-      "scheme": "Education Loan",
-      "title": "Education Loan Thin-File Handling",
-      "text": "A thin employment file is expected for Education Loan applicants and does not by itself require escalation; however, where the requested amount also exceeds a Loan-to-Income of 6.0x, the thin-file combination must be escalated to a human underwriter.",
-      "tags": ["thin-file", "education loan", "escalation", "employment history", "student"],
-      "rule": {"metric": "thin_file", "operator": "==", "threshold": false, "on_violation": "escalate", "guard": {"metric": "lti", "operator": ">", "threshold": 6.0}}
+      "scheme": "Education",
+      "title": "Education Loan-to-Income Cap",
+      "text": "The total requested credit amount for an Education Loan must not exceed 8 times the applicant's (or co-signer's) verified annual income, reflecting the extended multi-year repayment horizon typical of student loans. Requests exceeding this cap require a co-signer or explicit human underwriter override.",
+      "tags": ["loan-to-income", "lti", "education", "tuition", "cap"]
     },
     {
       "clause_id": "POL-VH-001",
-      "scheme": "Vehicle Loan",
-      "title": "Vehicle Loan Debt-to-Income (DTI) Threshold",
-      "text": "Vehicle Loan applications must maintain a Debt-to-Income (DTI) ratio at or below 45%. Applications above this threshold require referral to a human underwriter given the depreciating nature of the financed asset.",
-      "tags": ["dti", "affordability", "vehicle loan", "auto loan", "depreciation"],
-      "rule": {"metric": "dti", "operator": "<=", "threshold": 0.45, "on_violation": "refer"}
+      "scheme": "Vehicle",
+      "title": "Vehicle Loan-to-Value Cap",
+      "text": "The total requested credit amount for a Vehicle Loan must not exceed 5 times the applicant's verified annual income (an LTI cap of 5.0x), and must not exceed the appraised value of the vehicle being financed. Requests exceeding either cap require additional collateral or a co-signer.",
+      "tags": ["loan-to-value", "loan-to-income", "vehicle", "collateral", "cap"]
     },
     {
       "clause_id": "POL-VH-002",
-      "scheme": "Vehicle Loan",
-      "title": "Vehicle Loan Loan-to-Income (LTI) Cap",
-      "text": "Because the financed vehicle is a depreciating asset, the Loan-to-Income cap for Vehicle Loans is 4.0x verified annual income. Requests exceeding 4.0x LTI must be declined unless a larger down-payment brings the financed amount within the cap.",
-      "tags": ["loan-to-income", "lti", "vehicle loan", "depreciating asset", "down-payment"],
-      "rule": {"metric": "lti", "operator": "<=", "threshold": 4.0, "on_violation": "decline"}
+      "scheme": "Vehicle",
+      "title": "Vehicle Loan Minimum Income Requirement",
+      "text": "Applicants for a Vehicle Loan must demonstrate a minimum verified annual income of $12,000. Applications where verified income falls below this floor cannot be approved and must be referred for manual underwriting review.",
+      "tags": ["minimum income", "income floor", "vehicle", "eligibility"]
     },
     {
       "clause_id": "POL-VH-003",
-      "scheme": "Vehicle Loan",
-      "title": "Vehicle Loan Minimum Income Requirement",
-      "text": "Applicants for a Vehicle Loan must demonstrate a minimum verified annual income of $18,000 to cover instalments, insurance, and running costs. Applications below this floor must be referred for manual review.",
-      "tags": ["minimum income", "income floor", "vehicle loan", "insurance", "eligibility"],
-      "rule": {"metric": "annual_income", "operator": ">=", "threshold": 18000, "on_violation": "refer"}
+      "scheme": "Vehicle",
+      "title": "Insurance Verification Requirement",
+      "text": "Vehicle Loan applications must include proof of, or a binding commitment to obtain, comprehensive vehicle insurance naming the lender as loss payee before disbursement. Missing insurance verification is a missing-information gap requiring escalation.",
+      "tags": ["insurance", "vehicle", "verification", "missing information", "disbursement"]
     },
     {
-      "clause_id": "POL-BZ-001",
-      "scheme": "Business Loan",
-      "title": "Business Loan Debt-Service (DTI) Threshold",
-      "text": "Business Loan applications may carry a Debt-to-Income (debt-service) ratio of up to 55%, reflecting business cash-flow profiles, but any application above 55% must be referred for manual assessment of business financials.",
-      "tags": ["dti", "debt-service", "business loan", "cash flow", "affordability"],
-      "rule": {"metric": "dti", "operator": "<=", "threshold": 0.55, "on_violation": "refer"}
+      "clause_id": "POL-BU-001",
+      "scheme": "Business",
+      "title": "Business Loan Debt-to-Income Threshold",
+      "text": "Debt-to-Income (DTI) ratio for Business Loan applicants, calculated using blended personal and business debt service against verified household and business income, must not exceed 55%. Applications above this threshold require referral to a human underwriter.",
+      "tags": ["dti", "business", "blended income", "debt service", "affordability"]
     },
     {
-      "clause_id": "POL-BZ-002",
-      "scheme": "Business Loan",
-      "title": "Business Loan Minimum Trading History",
-      "text": "The applicant business must show at least 24 months of trading or employment history in the relevant field. Where the employment/trading-duration field indicates fewer than 24 months or an unemployment sentinel, the Business Loan must be escalated to a human underwriter.",
-      "tags": ["trading history", "business loan", "escalation", "employment history", "thin-file"],
-      "rule": {"metric": "thin_file", "operator": "==", "threshold": false, "on_violation": "escalate"}
+      "clause_id": "POL-BU-002",
+      "scheme": "Business",
+      "title": "Minimum Verified Business Revenue",
+      "text": "Applicants for a Business Loan must demonstrate a minimum verified annual business revenue of $50,000. Applications where verified revenue falls below this floor, or where revenue cannot be independently verified, must be referred for manual underwriting review.",
+      "tags": ["minimum revenue", "business", "verified income", "eligibility"]
     },
     {
-      "clause_id": "POL-BZ-003",
-      "scheme": "Business Loan",
-      "title": "Business Loan Loan-to-Income (LTI) Cap",
-      "text": "The requested Business Loan amount must not exceed 5.0x the verified annual income or declared business revenue. Requests above 5.0x LTI require security or a personal guarantee and must be referred for manual underwriting.",
-      "tags": ["loan-to-income", "lti", "business loan", "security", "personal guarantee"],
-      "rule": {"metric": "lti", "operator": "<=", "threshold": 5.0, "on_violation": "refer"}
+      "clause_id": "POL-BU-003",
+      "scheme": "Business",
+      "title": "Personal Guarantee Requirement",
+      "text": "Business Loan requests exceeding 4 times verified annual business revenue require a personal guarantee from the business owner or additional collateral before approval. Requests exceeding this cap without a guarantee must be escalated for human underwriter override.",
+      "tags": ["personal guarantee", "collateral", "business", "cap", "escalation"]
     },
     {
       "clause_id": "POL-FT-001",
-      "scheme": "First-Time Buyer Loan",
-      "title": "First-Time Buyer Conservative DTI Threshold",
-      "text": "First-Time Buyer Loans apply a conservative Debt-to-Income (DTI) ceiling of 40% to protect borrowers new to credit. Applications exceeding 40% DTI cannot be auto-approved and must be referred to a human underwriter.",
-      "tags": ["dti", "first-time buyer", "conservative", "affordability", "new to credit"],
-      "rule": {"metric": "dti", "operator": "<=", "threshold": 0.40, "on_violation": "refer"}
+      "scheme": "First-Time Borrower",
+      "title": "First-Time Borrower Alternative Credit Data",
+      "text": "First-Time Borrower Program applicants, by definition, have no prior credit bureau record and are always classified thin-file. Alternative data (verified rent payment history, utility payment history, or employment tenure) may be used to support the recommendation, but every First-Time Borrower application must still be escalated to a human underwriter for final review.",
+      "tags": ["first-time", "thin-file", "alternative credit data", "escalation", "bureau record"]
     },
     {
       "clause_id": "POL-FT-002",
-      "scheme": "First-Time Buyer Loan",
-      "title": "First-Time Buyer Loan-to-Income (LTI) Cap",
-      "text": "First-Time Buyer Loans are capped at a Loan-to-Income of 4.5x verified annual income. Requests above this cap require a guarantor or additional deposit and must be referred for manual review.",
-      "tags": ["loan-to-income", "lti", "first-time buyer", "guarantor", "deposit"],
-      "rule": {"metric": "lti", "operator": "<=", "threshold": 4.5, "on_violation": "refer"}
+      "scheme": "First-Time Borrower",
+      "title": "First-Time Borrower Conservative Loan-to-Income Cap",
+      "text": "To limit exposure on unverified credit histories, the total requested credit amount for a First-Time Borrower Program loan must not exceed 4 times the applicant's verified annual income (an LTI cap of 4.0x), a stricter cap than the standard Personal Loan scheme.",
+      "tags": ["loan-to-income", "lti", "first-time", "cap", "conservative"]
     },
     {
       "clause_id": "POL-FT-003",
-      "scheme": "First-Time Buyer Loan",
-      "title": "First-Time Buyer Mandatory Manual Review",
-      "text": "Because first-time borrowers typically present a thin credit file, every First-Time Buyer application with fewer than 24 months of employment history or no bureau record must be escalated for a mandatory human review before any recommendation is issued.",
-      "tags": ["thin-file", "first-time buyer", "escalation", "manual review", "bureau record"],
-      "rule": {"metric": "thin_file", "operator": "==", "threshold": false, "on_violation": "escalate"}
+      "scheme": "First-Time Borrower",
+      "title": "First-Time Borrower Minimum Income Requirement",
+      "text": "Applicants for the First-Time Borrower Program must demonstrate a minimum verified annual income of $12,000. Applications where verified income falls below this floor must be referred for manual underwriting review.",
+      "tags": ["minimum income", "income floor", "first-time", "eligibility"]
     },
     {
       "clause_id": "POL-LI-001",
-      "scheme": "Low-Income Loan",
-      "title": "Low-Income Loan Reduced Income Floor",
-      "text": "The Low-Income Loan scheme applies a reduced minimum verified annual income floor of $8,000 to widen access, while still requiring evidence of stable income. Applications below $8,000 must be referred for manual assessment of affordability and support options.",
-      "tags": ["minimum income", "low-income loan", "financial inclusion", "income floor", "affordability"],
-      "rule": {"metric": "annual_income", "operator": ">=", "threshold": 8000, "on_violation": "refer"}
+      "scheme": "Low-Income Assistance",
+      "title": "Low-Income Assistance Reduced Income Floor",
+      "text": "The Low-Income Assistance Program applies a reduced minimum verified annual income floor of $8,000, reflecting its mission to serve applicants who would not qualify under the standard Personal Loan scheme. This reduced floor must never be applied outside the Low-Income Assistance Program scheme.",
+      "tags": ["minimum income", "income floor", "low-income", "eligibility", "assistance"]
     },
     {
       "clause_id": "POL-LI-002",
-      "scheme": "Low-Income Loan",
-      "title": "Low-Income Loan Strict Affordability (DTI) Cap",
-      "text": "To protect low-income borrowers from over-indebtedness, the Low-Income Loan scheme enforces a strict Debt-to-Income (DTI) cap of 35%. Applications above 35% DTI must be declined or referred, as the higher affordability risk outweighs the inclusion benefit.",
-      "tags": ["dti", "low-income loan", "affordability", "over-indebtedness", "consumer protection"],
-      "rule": {"metric": "dti", "operator": "<=", "threshold": 0.35, "on_violation": "refer"}
+      "scheme": "Low-Income Assistance",
+      "title": "Low-Income Assistance Debt-to-Income Threshold",
+      "text": "Debt-to-Income (DTI) ratio for Low-Income Assistance Program applicants must not exceed 45%, a stricter threshold than the standard Personal Loan scheme, reflecting the reduced financial buffer typical of this applicant population.",
+      "tags": ["dti", "low-income", "affordability", "assistance"]
     },
     {
       "clause_id": "POL-LI-003",
-      "scheme": "Low-Income Loan",
-      "title": "Low-Income Loan Loan-to-Income (LTI) Cap",
-      "text": "Low-Income Loans are capped at a Loan-to-Income of 3.0x verified annual income to keep total borrowing proportionate to repayment capacity. Requests above 3.0x LTI must be referred for manual affordability review.",
-      "tags": ["loan-to-income", "lti", "low-income loan", "repayment capacity", "affordability"],
-      "rule": {"metric": "lti", "operator": "<=", "threshold": 3.0, "on_violation": "refer"}
+      "scheme": "Low-Income Assistance",
+      "title": "Hardship Deferment Provision",
+      "text": "Low-Income Assistance Program borrowers experiencing documented financial hardship after disbursement are eligible for a payment deferment of up to 3 months without penalty. This provision does not apply at origination time and has no bearing on the initial Approve/Decline/Refer recommendation.",
+      "tags": ["hardship", "deferment", "low-income", "post-disbursement"]
     }
   ]
 }

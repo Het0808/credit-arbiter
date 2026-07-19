@@ -92,3 +92,23 @@ def test_ingest_endpoint_flags_incomplete_without_crashing(client, auth_headers)
     body = response.json()
     assert body["status"] == "INCOMPLETE"
     assert "AMT_ANNUITY" in body["missing_fields"]
+
+
+def test_reindex_endpoint_activates_corpus_and_records_version(client, auth_headers):
+    response = client.post("/api/policy/reindex", headers=auth_headers)
+    assert response.status_code == 200
+    body = response.json()
+    assert body["version"] == "v1.0"
+    assert body["clause_count"] == 20
+
+    from src.api.models import PolicyCorpusVersion
+
+    session = client.SessionLocal()
+    recorded = session.query(PolicyCorpusVersion).filter(PolicyCorpusVersion.version == "v1.0").first()
+    session.close()
+    assert recorded is not None
+
+
+def test_reindex_endpoint_requires_auth(client):
+    response = client.post("/api/policy/reindex")
+    assert response.status_code == 401

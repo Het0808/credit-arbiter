@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -38,6 +38,15 @@ class ApplicationIngestRequest(BaseModel):
     NAME_FAMILY_STATUS: Optional[str] = None
     REGION_RATING_CLIENT: Optional[str] = None
     OCCUPATION_TYPE: Optional[str] = None
+    EXT_SOURCE_1: Optional[str] = None
+    EXT_SOURCE_2: Optional[str] = None
+    EXT_SOURCE_3: Optional[str] = None
+    CNT_FAM_MEMBERS: Optional[str] = None
+    AMT_GOODS_PRICE: Optional[str] = None
+    CNT_CHILDREN: Optional[str] = None
+    FLAG_OWN_CAR: Optional[str] = None
+    FLAG_OWN_REALTY: Optional[str] = None
+    NAME_INCOME_TYPE: Optional[str] = None
 
 
 class ApplicationSummary(BaseModel):
@@ -60,8 +69,39 @@ class ApplicationDetail(ApplicationSummary):
     occupation_type: Optional[str]
     missing_fields: Optional[str]
     created_at: datetime
+    loan_scheme: Optional[str] = None
+    ext_source_1: Optional[float] = None
+    ext_source_2: Optional[float] = None
+    ext_source_3: Optional[float] = None
+    cnt_fam_members: Optional[float] = None
+    amt_goods_price: Optional[float] = None
+    cnt_children: Optional[int] = None
+    flag_own_car: Optional[str] = None
+    flag_own_realty: Optional[str] = None
+    name_income_type: Optional[str] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# --- Documents (US-301, US-302) ---
+
+
+class DocumentOut(BaseModel):
+    id: int
+    application_id: int
+    doc_type: str
+    filename: str
+    uploaded_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentVerificationOut(BaseModel):
+    required_documents: list[str]
+    missing_documents: list[str]
+    complete: bool
+    consistent: bool
+    consistency_findings: list[str]
 
 
 # --- Scoring (US-103) ---
@@ -71,9 +111,17 @@ class ScoreRequest(BaseModel):
     application_id: int
 
 
+class RiskFactor(BaseModel):
+    feature: str
+    label: str
+    value: Any
+    impact: float
+
+
 class ScoreResponse(BaseModel):
     probability: float
     band: str
+    top_risk_factors: list[RiskFactor] = []
 
 
 # --- Policy retrieval (US-105) ---
@@ -81,8 +129,9 @@ class ScoreResponse(BaseModel):
 
 class ClauseMatch(BaseModel):
     clause_id: str
-    source_id: Optional[str] = None
-    scheme: Optional[str] = None
+    source_id: str
+    scheme: str
+    version: str
     title: str
     text: str
     score: float
@@ -95,7 +144,6 @@ class PolicyRetrieveRequest(BaseModel):
     application_id: Optional[int] = None
     query: Optional[str] = None
     scheme: Optional[str] = None
-    corpus_version: Optional[str] = None
 
 
 class PolicyRetrieveResponse(BaseModel):
@@ -159,6 +207,13 @@ class DocumentVerificationResponse(BaseModel):
     document_count: int
 
 
+class PolicyReindexResponse(BaseModel):
+    version: str
+    effective_date: str
+    schemes: list[str]
+    clause_count: int
+
+
 # --- Regulatory stub (US-109) ---
 
 
@@ -204,6 +259,11 @@ class DecisionRecordOut(BaseModel):
     underwriter_reason: Optional[str]
     underwriter_reason_code: Optional[str] = None
     underwriter_action_at: Optional[datetime]
+    cost_usd: Optional[float] = None
+    record_hash: Optional[str] = None
+
+
+REASON_CODES = ["insufficient_evidence", "policy_too_strict", "doc_follow_up", "fairness_concern", "other"]
 
 
 # Structured reason codes an underwriter must pick when overriding (US-308).
@@ -221,14 +281,6 @@ OVERRIDE_REASON_CODES = [
 class DecisionRequest(BaseModel):
     action: Literal["accept", "override"]
     reason: Optional[str] = None
-    reason_code: Optional[str] = None
-
-
-class HumanReviewItem(BaseModel):
-    assessment_id: int
-    application_id: int
-    recommendation: str
-    escalation_reason_code: Optional[str]
-    risk_band: Optional[str]
-    loan_scheme: Optional[str]
-    created_at: datetime
+    reason_code: Optional[
+        Literal["insufficient_evidence", "policy_too_strict", "doc_follow_up", "fairness_concern", "other"]
+    ] = None
