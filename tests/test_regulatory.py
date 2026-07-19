@@ -19,7 +19,15 @@ def test_different_ids_can_produce_different_verdicts():
 def test_forced_failure_retries_then_escalates_never_fabricates():
     result = verify_regulatory("100001", force_fail=True)
     assert result["status"] == "escalate_for_review"
-    assert result["reason"] == "regulatory_service_unavailable_after_retries"
+    assert "unresolved" in result["reason"]
+    # Every one of the four checks must have exhausted its retries, not fabricated.
+    assert len(result["checks"]) == 4
+    assert all(c["status"] == "escalate_for_review" for c in result["checks"])
+
+
+def test_all_four_checks_run_and_pass_for_clean_id():
+    result = verify_regulatory("100001")
+    assert {c["check"] for c in result["checks"]} == {"identity", "employment", "tax", "sanctions"}
 
 
 def test_latency_stays_within_500ms_budget_including_retries():
