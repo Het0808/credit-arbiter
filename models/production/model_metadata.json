@@ -1,16 +1,22 @@
 {
-    "selected_model_name": "LightGBM (Grid Tuned)",
-    "selected_model_version": "v1_grid_tuned",
-    "reason_for_selection": "LightGBM tuned via GridSearchCV (CV ROC-AUC = 0.7602) outperforming prior champion.",
-    "ROC-AUC": 0.765440057123484,
-    "Precision": 0.17036114570361147,
-    "Recall": 0.6888217522658611,
-    "F1": 0.2731629392971246,
+    "selected_model_name": "LightGBM (Hardened, Aux Features)",
+    "selected_model_version": "v1_hardened",
+    "reason_for_selection": "US-201 hardening: aux bureau/previous-application aggregates + fairness-clean feature set (CODE_GENDER/DAYS_BIRTH/AGE_YEARS excluded).",
+    "ROC-AUC": 0.7755469937302458,
+    "Best-F1": 0.32850731142319384,
+    "F1-threshold": 0.6599999999999999,
+    "Precision": 0.2564131540287038,
+    "Recall": 0.4569989929506546,
+    "feature_count": 54,
+    "protected_features_excluded": [
+        "CODE_GENDER",
+        "DAYS_BIRTH",
+        "AGE_YEARS"
+    ],
     "threshold_policy": {
         "conservative": 0.36,
         "balanced": 0.66,
         "revenue_friendly": 0.75
     },
-    "feature_count": 32,
-    "training_date": "2026-07-08"
+    "training_date": "2026-07-16"
 }
