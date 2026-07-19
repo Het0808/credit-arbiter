@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .database import engine, Base
-from .routers import applications, assessments, auth, policy, regulatory, scoring
+from .routers import applications, assessments, auth, documents, policy, regulatory, scoring
 
 # Create all tables in the database (SQLite for local, or Postgres)
 Base.metadata.create_all(bind=engine)
@@ -25,6 +25,7 @@ app.include_router(policy.router, prefix="/api")
 app.include_router(regulatory.router, prefix="/api")
 app.include_router(assessments.router, prefix="/api")
 app.include_router(assessments.assess_router, prefix="/api")
+app.include_router(documents.router, prefix="/api")
 
 
 @app.get("/api/health")
