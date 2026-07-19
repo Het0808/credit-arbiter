@@ -273,3 +273,86 @@ def calculate_risk_band(
         return "MEDIUM"
     else:
         return "HIGH"
+
+
+def run_applicant_inference(
+    application_id: int,
+    low_threshold: float = 0.36,
+    high_threshold: float = 0.66
+) -> Dict[str, Any]:
+    """
+    Load an applicant's data, run inference, calculate risk band,
+    and attach explanation factors.
+
+    Args:
+        application_id: Unique client application ID (SK_ID_CURR).
+        low_threshold: Decision boundary for LOW risk band.
+        high_threshold: Decision boundary for HIGH risk band.
+
+    Returns:
+        Dictionary containing prediction results, scores, bands, risk factors,
+        model version, and type.
+    """
+    config = ModelConfig()
+    
+    # 1. Load production model
+    model = load_model(PROD_MODEL_PATH)
+    
+    # Load model metadata
+    model_version = "v1"
+    model_type = "LightGBM"
+    if PROD_METADATA_PATH.exists():
+        try:
+            with open(PROD_METADATA_PATH, "r") as f:
+                metadata = json.load(f)
+                model_version = metadata.get("selected_model_version", model_version)
+                model_type = metadata.get("selected_model_name", model_type)
+        except Exception as e:
+            print(f"Warning: Could not read metadata: {e}")
+            
+    # 2. Load raw dataset and extract target row
+    df = load_raw_data()
+    applicant_df = df[df[config.ID_COLUMN] == application_id]
+    
+    if applicant_df.empty:
+        raise ValueError(f"Application ID {application_id} not found in raw dataset.")
+
+    # 3. Merge auxiliary aggregates (US-201) then apply feature engineering.
+    applicant_df = merge_aux_features(applicant_df)
+    X, _, _ = prepare_pipeline_data(applicant_df, config)
+    
+    # 4. Predict probability
+    prob = float(predict_probability(model, X)[0])
+    
+    # 5. Classify risk band
+    risk_band = calculate_risk_band(prob, low_threshold, high_threshold)
+    
+    # 6. Retrieve explanation factors
+    explanation = get_attribution_explanation(application_id)
+    top_factors = explanation.get("top_risk_drivers", [])
+    
+    # Format return payload
+    result = {
+        "application_id": int(application_id),
+        "risk_score": float(np.round(prob, 4)),
+        "risk_band": risk_band,
+        "top_risk_factors": top_factors,
+        "model_version": model_version,
+        "model_type": model_type
+    }
+    
+    return result
+
+
+if __name__ == "__main__":
+    # Test sample inference run
+    config = ModelConfig()
+    try:
+        df = load_raw_data()
+        sample_id = int(df[config.ID_COLUMN].iloc[0])
+        print(f"Running inference on sample applicant: {sample_id}")
+        result = run_applicant_inference(sample_id)
+        print("\nInference Output JSON:")
+        print(json.dumps(result, indent=2))
+    except Exception as e:
+        print(f"Error during test inference: {e}")
