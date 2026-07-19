@@ -24,7 +24,7 @@ def test_retrieval_accuracy_meets_85_percent_floor():
     eval_set = _load_eval_set()
     results = []
     for case in eval_set:
-        outcome = retrieve(case["query"])
+        outcome = retrieve(case["query"], scheme=case.get("scheme"))
         top_clause_id = outcome["clauses"][0]["clause_id"] if outcome["clauses"] else None
         passed = top_clause_id == case["expected_clause_id"]
         results.append((case["query"], case["expected_clause_id"], top_clause_id, passed))
