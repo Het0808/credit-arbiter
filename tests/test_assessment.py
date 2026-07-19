@@ -20,13 +20,17 @@ def test_missing_risk_score_forces_refer_kill_switch(db_session, incomplete_appl
     record = run_assessment(db_session, incomplete_application)
     assert record.recommendation == "Refer"
     assert record.escalation_flag is True
+    assert record.evidence_complete is False
     evidence = json.loads(record.evidence_chain_json)
-    assert evidence["kill_switch_reason"] == "missing_risk_score"
+    # US-307: missing risk evidence component triggers the completeness kill-switch.
+    assert evidence["kill_switch_reason"].startswith("missing_evidence")
+    assert "risk_score" in evidence["missing_evidence"]
+    assert record.escalation_reason_code == "incomplete_evidence"
 
 
 def test_retrieval_failure_forces_refer_kill_switch(db_session, complete_application, monkeypatch):
-    def _fake_retrieve_for_profile(profile, top_k=3):
-        return {"clauses": [], "retrieval_failed": True}
+    def _fake_retrieve_for_profile(profile, scheme=None, top_k=3, corpus_version=None):
+        return {"clauses": [], "retrieval_failed": True, "corpus_version": None, "scheme": scheme}
 
     monkeypatch.setattr(assessment_module, "retrieve_for_profile", _fake_retrieve_for_profile)
 
@@ -58,11 +62,19 @@ def test_forced_regulatory_failure_escalates_to_refer(db_session, complete_appli
 def test_recommendation_rule_table(
     db_session, complete_application, monkeypatch, regulatory_status, risk_band, expected_recommendation
 ):
-    monkeypatch.setattr(assessment_module, "score_application", lambda profile: (0.5, risk_band))
+    # High-confidence score (far from 0.5) so the US-306 confidence gate is not the
+    # active factor; verified docs so the US-302 doc gate does not downgrade Approve.
+    monkeypatch.setattr(assessment_module, "score_application", lambda profile: (0.85, risk_band))
     monkeypatch.setattr(
         assessment_module,
         "verify_regulatory",
-        lambda application_id, force_fail=False: {"status": regulatory_status, "reason": None},
+        lambda application_id, force_fail=False: {"status": regulatory_status, "reason": None, "checks": []},
+    )
+    monkeypatch.setattr(
+        assessment_module,
+        "verify_documents",
+        lambda db, application: {"verified": True, "complete": True, "consistent": True,
+                                 "missing_information": [], "consistency_findings": []},
     )
 
     record = run_assessment(db_session, complete_application)

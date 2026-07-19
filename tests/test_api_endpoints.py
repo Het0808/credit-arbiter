@@ -61,13 +61,26 @@ def test_override_requires_a_reason(client, auth_headers, seeded_application):
     )
     assert missing_reason.status_code == 400
 
+    # US-308: a reason_code is also required to override.
+    missing_code = client.post(
+        f"/api/assessments/{assessment_id}/decision",
+        json={"action": "override", "reason": "Manual income verification differs"},
+        headers=auth_headers,
+    )
+    assert missing_code.status_code == 400
+
     with_reason = client.post(
         f"/api/assessments/{assessment_id}/decision",
-        json={"action": "override", "reason": "Manual income verification differs from stated income"},
+        json={
+            "action": "override",
+            "reason": "Manual income verification differs from stated income",
+            "reason_code": "compensating_factors",
+        },
         headers=auth_headers,
     )
     assert with_reason.status_code == 200
     assert with_reason.json()["underwriter_reason"]
+    assert with_reason.json()["underwriter_reason_code"] == "compensating_factors"
 
 
 def test_assess_404_for_unknown_application(client, auth_headers):

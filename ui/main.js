@@ -23,17 +23,26 @@ const detailProfile = document.getElementById('detail-profile');
 const assessBtn = document.getElementById('assess-btn');
 const assessmentResult = document.getElementById('assessment-result');
 const escalationBanner = document.getElementById('escalation-banner');
-const resultRisk = document.getElementById('result-risk');
-const resultClause = document.getElementById('result-clause');
-const resultRegulatory = document.getElementById('result-regulatory');
+const evRisk = document.getElementById('ev-risk');
+const evPolicy = document.getElementById('ev-policy');
+const evDocs = document.getElementById('ev-docs');
+const evRegulatory = document.getElementById('ev-regulatory');
+const evFairness = document.getElementById('ev-fairness');
 const resultRecommendation = document.getElementById('result-recommendation');
 const decisionControls = document.getElementById('decision-controls');
 const acceptBtn = document.getElementById('accept-btn');
 const showOverrideBtn = document.getElementById('show-override-btn');
 const overrideForm = document.getElementById('override-form');
 const overrideReason = document.getElementById('override-reason');
+const overrideReasonCode = document.getElementById('override-reason-code');
 const submitOverrideBtn = document.getElementById('submit-override-btn');
 const decisionConfirmation = document.getElementById('decision-confirmation');
+const clauseModal = document.getElementById('clause-modal');
+const clauseModalBody = document.getElementById('clause-modal-body');
+const clauseModalClose = document.getElementById('clause-modal-close');
+
+const escapeHtml = (s) => String(s ?? '').replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // State
 let token = localStorage.getItem('halcyon_token');
@@ -298,30 +307,99 @@ function renderAssessment(decision) {
   overrideForm.classList.add('hidden');
   decisionControls.classList.remove('hidden');
 
-  escalationBanner.classList.toggle('hidden', !decision.escalation_flag);
+  const ev = decision.evidence_chain || {};
+  const ts = decision.created_at ? new Date(decision.created_at).toLocaleString() : '';
+  ['ev-risk-time', 'ev-policy-time', 'ev-docs-time', 'ev-reg-time', 'ev-fair-time']
+    .forEach((id) => { document.getElementById(id).textContent = ts; });
 
-  const bandClass = decision.risk_band ? `badge-${decision.risk_band.toLowerCase()}` : '';
-  resultRisk.innerHTML = decision.risk_score !== null && decision.risk_score !== undefined
-    ? `<span class="badge ${bandClass}">${decision.risk_band}</span>&nbsp; ${(decision.risk_score * 100).toFixed(1)}% probability of default`
-    : 'No risk score available';
-
-  if (decision.retrieved_clause_id) {
-    resultClause.innerHTML = `
-      <div class="clause-title">${decision.retrieved_clause_id}</div>
-      <div class="clause-text">${decision.retrieved_clause_text}</div>
-      <div class="clause-meta">Confidence: ${(decision.retrieval_confidence * 100).toFixed(1)}%</div>
-    `;
+  if (decision.escalation_flag) {
+    const code = decision.escalation_reason_code ? ` — ${decision.escalation_reason_code.replace(/_/g, ' ')}` : '';
+    escalationBanner.textContent = `Escalated for human review${code}`;
+    escalationBanner.classList.remove('hidden');
   } else {
-    resultClause.innerHTML = '<span>No policy clause retrieved (retrieval failed)</span>';
+    escalationBanner.classList.add('hidden');
   }
 
-  resultRegulatory.textContent = decision.regulatory_status || '-';
+  // 1 · Risk & factors (SHAP-style contributors)
+  const bandClass = decision.risk_band ? `badge-${decision.risk_band.toLowerCase()}` : '';
+  let riskHtml = decision.risk_score != null
+    ? `<div><span class="badge ${bandClass}">${decision.risk_band}</span> &nbsp;${(decision.risk_score * 100).toFixed(1)}% PD`
+      + (ev.model_confidence != null ? ` · confidence ${(ev.model_confidence * 100).toFixed(0)}%` : '') + `</div>`
+    : '<div>No risk score available</div>';
+  if (Array.isArray(ev.risk_factors) && ev.risk_factors.length) {
+    riskHtml += '<ul class="factor-list">' + ev.risk_factors.map((f) =>
+      `<li><span class="factor-dir factor-${f.direction === 'increases_risk' ? 'up' : 'down'}">${f.direction === 'increases_risk' ? '▲' : '▼'}</span> ${escapeHtml(f.label)} <span class="factor-val">${f.contribution}</span></li>`
+    ).join('') + '</ul>';
+  }
+  evRisk.innerHTML = riskHtml;
+
+  // 2 · Policy clauses (clickable citations -> source_id + version)
+  const clauses = ev.policy_clauses || [];
+  if (clauses.length) {
+    evPolicy.innerHTML = clauses.map((c) =>
+      `<button class="citation" data-clause="${escapeHtml(c.clause_id)}" data-version="${escapeHtml(c.corpus_version || '')}">${escapeHtml(c.clause_id)} <span class="citation-ver">${escapeHtml(c.corpus_version || '')}</span></button>`
+    ).join('')
+    + `<div class="evidence-meta">Adherence: ${((ev.policy_adherence ?? 1) * 100).toFixed(0)}%`
+    + (ev.policy_failed_rules && ev.policy_failed_rules.length ? ` · failed: ${ev.policy_failed_rules.map((r) => r.clause_id).join(', ')}` : '') + `</div>`;
+  } else {
+    evPolicy.innerHTML = '<span class="evidence-empty">No policy clause retrieved (retrieval failed)</span>';
+  }
+
+  // 3 · Documents
+  const docs = ev.document_findings;
+  if (docs) {
+    const missing = docs.missing_information || [];
+    const findings = docs.consistency_findings || [];
+    evDocs.innerHTML =
+      `<div>${docs.verified ? '<span class="badge badge-low">Verified</span>' : '<span class="badge badge-medium">Needs review</span>'} · ${docs.document_count ?? 0} document(s)</div>`
+      + (missing.length ? `<div class="evidence-meta">Missing: ${missing.map(escapeHtml).join(', ')}</div>` : '')
+      + (findings.length ? `<div class="evidence-meta">Findings: ${findings.map((f) => escapeHtml(f.type)).join(', ')}</div>` : '');
+  } else {
+    evDocs.innerHTML = '<span class="evidence-empty">No document report</span>';
+  }
+
+  // 4 · Regulatory (per-check breakdown)
+  const checks = ev.regulatory_checks || [];
+  evRegulatory.innerHTML =
+    `<div><span class="badge badge-${(decision.regulatory_status || '').toLowerCase() === 'pass' ? 'low' : 'high'}">${decision.regulatory_status || '-'}</span></div>`
+    + (checks.length ? '<div class="check-grid">' + checks.map((c) =>
+        `<span class="check-chip check-${c.status.toLowerCase().includes('pass') ? 'ok' : 'bad'}">${escapeHtml(c.check)}: ${escapeHtml(c.status)}</span>`
+      ).join('') + '</div>' : '')
+    + (ev.regulatory_reason ? `<div class="evidence-meta">${escapeHtml(ev.regulatory_reason)}</div>` : '');
+
+  // 5 · Fairness
+  const fair = ev.fairness_result || {};
+  evFairness.innerHTML = fair.scheme_paused
+    ? `<span class="badge badge-high">Scheme paused (fairness hard-block)</span>`
+    : `<span class="badge badge-low">No active fairness block</span> <span class="evidence-meta">${escapeHtml(fair.scheme || '')}</span>`;
 
   const recommendationClass = `badge-${decision.recommendation.toLowerCase()}`;
   resultRecommendation.innerHTML = `<span class="badge ${recommendationClass}">${decision.recommendation}</span>`;
+
+  evPolicy.querySelectorAll('.citation').forEach((btn) => {
+    btn.addEventListener('click', () => openClause(btn.dataset.clause, btn.dataset.version));
+  });
 }
 
-async function handleDecision(action, reason) {
+async function openClause(clauseId, version) {
+  try {
+    const q = version ? `?corpus_version=${encodeURIComponent(version)}` : '';
+    const res = await fetch(`${API_BASE}/policy/clause/${encodeURIComponent(clauseId)}${q}`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Clause not found');
+    const clause = await res.json();
+    clauseModalBody.innerHTML =
+      `<div class="clause-title">${escapeHtml(clause.clause_id)} <span class="citation-ver">${escapeHtml(clause.corpus_version)}</span></div>`
+      + `<div class="clause-scheme">${escapeHtml(clause.scheme)} — ${escapeHtml(clause.title)}</div>`
+      + `<div class="clause-text">${escapeHtml(clause.text)}</div>`;
+    clauseModal.classList.remove('hidden');
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+async function handleDecision(action, reason, reasonCode) {
   try {
     const res = await fetch(`${API_BASE}/assessments/${currentAssessmentId}/decision`, {
       method: 'POST',
@@ -329,7 +407,7 @@ async function handleDecision(action, reason) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ action, reason: reason || null })
+      body: JSON.stringify({ action, reason: reason || null, reason_code: reasonCode || null })
     });
 
     if (!res.ok) {
@@ -371,11 +449,84 @@ showOverrideBtn.addEventListener('click', () => {
 });
 submitOverrideBtn.addEventListener('click', () => {
   const reason = overrideReason.value.trim();
+  const reasonCode = overrideReasonCode.value;
+  if (!reasonCode) {
+    showAlert('A reason code is required to override a recommendation');
+    return;
+  }
   if (!reason) {
     showAlert('A reason is required to override a recommendation');
     return;
   }
-  handleDecision('override', reason);
+  handleDecision('override', reason, reasonCode);
+});
+
+clauseModalClose.addEventListener('click', () => clauseModal.classList.add('hidden'));
+clauseModal.addEventListener('click', (e) => {
+  if (e.target === clauseModal) clauseModal.classList.add('hidden');
+});
+
+// --- Ops dashboard (US-407) ---
+const opsToggleBtn = document.getElementById('ops-toggle-btn');
+const opsPanel = document.getElementById('ops-panel');
+const opsKpis = document.getElementById('ops-kpis');
+const opsAlerts = document.getElementById('ops-alerts');
+const killSwitchInput = document.getElementById('kill-switch-input');
+
+const fmtPct = (v) => (v == null ? '—' : `${(v * 100).toFixed(0)}%`);
+const fmtUsd = (v) => (v == null ? '—' : `$${Number(v).toFixed(4)}`);
+const fmtNum = (v, unit = '') => (v == null ? '—' : `${v}${unit}`);
+
+async function loadDashboard() {
+  try {
+    const [dashRes, ksRes] = await Promise.all([
+      fetch(`${API_BASE}/ops/dashboard`, { headers: { 'Authorization': `Bearer ${token}` } }),
+      fetch(`${API_BASE}/ops/kill-switch`, { headers: { 'Authorization': `Bearer ${token}` } }),
+    ]);
+    if (!dashRes.ok) throw new Error('Failed to load dashboard');
+    const dash = await dashRes.json();
+    const ks = await ksRes.json();
+    killSwitchInput.checked = !!ks.active;
+
+    const k = dash.kpis;
+    const tiles = [
+      ['Throughput', fmtNum(k.throughput_decisions), `${k.window_days}d`],
+      ['P95 latency', fmtNum(k.p95_latency_s, ' s'), `≤ ${dash.thresholds.p95_latency_s}s`],
+      ['Cost / app', fmtUsd(k.cost_per_app_usd), `≤ $${dash.thresholds.cost_per_app_usd}`],
+      ['Acceptance', fmtPct(k.acceptance_rate), `≥ ${fmtPct(dash.thresholds.acceptance_rate_min)}`],
+      ['Override rate', fmtPct(k.override_rate), ''],
+      ['Fairness gap', fmtNum(k.fairness_gap_pp, ' pp'), `≤ ${dash.thresholds.fairness_gap_pp}pp`],
+    ];
+    opsKpis.innerHTML = tiles.map(([label, val, sub]) =>
+      `<div class="kpi-tile"><div class="kpi-label">${label}</div><div class="kpi-value">${val}</div><div class="kpi-sub">${sub}</div></div>`
+    ).join('');
+
+    if (dash.alerts && dash.alerts.length) {
+      opsAlerts.innerHTML = dash.alerts.map((a) => `<div>⚠ ${escapeHtml(a)}</div>`).join('');
+      opsAlerts.classList.remove('hidden');
+    } else {
+      opsAlerts.classList.add('hidden');
+    }
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+opsToggleBtn.addEventListener('click', () => {
+  opsPanel.classList.toggle('hidden');
+  if (!opsPanel.classList.contains('hidden')) loadDashboard();
+});
+
+killSwitchInput.addEventListener('change', async () => {
+  try {
+    await fetch(`${API_BASE}/ops/kill-switch`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ active: killSwitchInput.checked }),
+    });
+  } catch (error) {
+    showAlert(error.message);
+  }
 });
 
 // Start
