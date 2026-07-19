@@ -81,19 +81,82 @@ class ScoreResponse(BaseModel):
 
 class ClauseMatch(BaseModel):
     clause_id: str
+    source_id: Optional[str] = None
+    scheme: Optional[str] = None
     title: str
     text: str
     score: float
+    corpus_version: Optional[str] = None
+
+    model_config = ConfigDict(extra="allow")
 
 
 class PolicyRetrieveRequest(BaseModel):
     application_id: Optional[int] = None
     query: Optional[str] = None
+    scheme: Optional[str] = None
+    corpus_version: Optional[str] = None
 
 
 class PolicyRetrieveResponse(BaseModel):
     clauses: list[ClauseMatch]
     retrieval_failed: bool
+    corpus_version: Optional[str] = None
+    scheme: Optional[str] = None
+
+
+# --- Policy evaluation (US-206) & version management (US-207) ---
+
+
+class PolicyEvaluateRequest(BaseModel):
+    application_id: int
+    scheme: Optional[str] = None
+    corpus_version: Optional[str] = None
+
+
+class PolicyEvaluateResponse(BaseModel):
+    scheme: Optional[str] = None
+    corpus_version: Optional[str] = None
+    passed_rules: list[str]
+    failed_rules: list[dict]
+    escalation_required: bool
+    required_action: Optional[str] = None
+    approve_allowed: bool
+    policy_adherence: float
+    metrics: dict
+
+
+class PolicyReindexRequest(BaseModel):
+    version: Optional[str] = None
+
+
+# --- Documents (US-301, US-302) ---
+
+
+class DocumentOut(BaseModel):
+    id: int
+    application_id: int
+    doc_type: str
+    filename: str
+    content_type: Optional[str]
+    size_bytes: Optional[int]
+    declared_name: Optional[str]
+    declared_income: Optional[float]
+    uploaded_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DocumentVerificationResponse(BaseModel):
+    scheme: str
+    required_docs: list[str]
+    present_docs: list[str]
+    missing_information: list[str]
+    complete: bool
+    consistency_findings: list[dict]
+    consistent: bool
+    verified: bool
+    document_count: int
 
 
 # --- Regulatory stub (US-109) ---
@@ -126,16 +189,46 @@ class DecisionRecordOut(BaseModel):
     retrieved_clause_text: Optional[str]
     retrieval_confidence: Optional[float]
     retrieval_failed: bool
+    policy_version: Optional[str] = None
+    loan_scheme: Optional[str] = None
     regulatory_status: Optional[str]
     recommendation: str
     evidence_chain: dict
     escalation_flag: bool
+    escalation_reason_code: Optional[str] = None
+    evidence_complete: Optional[bool] = None
+    estimated_cost_usd: Optional[float] = None
+    cost_guardrail_breached: Optional[bool] = None
     created_at: datetime
     underwriter_action: Optional[str]
     underwriter_reason: Optional[str]
+    underwriter_reason_code: Optional[str] = None
     underwriter_action_at: Optional[datetime]
+
+
+# Structured reason codes an underwriter must pick when overriding (US-308).
+OVERRIDE_REASON_CODES = [
+    "compensating_factors",
+    "policy_exception_approved",
+    "additional_documentation",
+    "data_quality_issue",
+    "risk_appetite",
+    "regulatory_clarification",
+    "other",
+]
 
 
 class DecisionRequest(BaseModel):
     action: Literal["accept", "override"]
     reason: Optional[str] = None
+    reason_code: Optional[str] = None
+
+
+class HumanReviewItem(BaseModel):
+    assessment_id: int
+    application_id: int
+    recommendation: str
+    escalation_reason_code: Optional[str]
+    risk_band: Optional[str]
+    loan_scheme: Optional[str]
+    created_at: datetime
