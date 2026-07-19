@@ -39,7 +39,7 @@ def load_raw_data(data_path: str = None) -> pd.DataFrame:
     if not data_path.exists():
         # Look for fallback in standard project structure
         project_root = Path(__file__).resolve().parents[2]
-        fallback_path = project_root / "data" / "home_credit_data" / "home-credit-default-risk" / "application_train.csv"
+        fallback_path = project_root / "data" / "home_credit_data" / "application_train.csv"
         if fallback_path.exists():
             data_path = fallback_path
         else:
@@ -101,7 +101,12 @@ def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
     df["CREDIT_GOODS_RATIO"] = safe_div(df["AMT_CREDIT"], df["AMT_GOODS_PRICE"])
 
     # 2. Demographic Features
-    df["AGE_YEARS"] = df["DAYS_BIRTH"].div(-365.25)
+    # AGE_YEARS is computed only for callers that supply DAYS_BIRTH (e.g. the
+    # training pipeline, which loads the full raw CSV) - it is never a model
+    # feature (A-8b) and the live single-profile scoring path deliberately
+    # never passes DAYS_BIRTH in, so it is safely skipped there.
+    if "DAYS_BIRTH" in df.columns:
+        df["AGE_YEARS"] = df["DAYS_BIRTH"].div(-365.25)
     df["EMPLOYMENT_YEARS"] = df["DAYS_EMPLOYED"].div(-365.25)
     df["CHILDREN_RATIO"] = safe_div(df["CNT_CHILDREN"], df["CNT_FAM_MEMBERS"])
     df["INCOME_PER_PERSON"] = safe_div(df["AMT_INCOME_TOTAL"], df["CNT_FAM_MEMBERS"])

@@ -31,7 +31,10 @@ def _to_decision_record_out(record: DecisionRecord) -> DecisionRecordOut:
         created_at=record.created_at,
         underwriter_action=record.underwriter_action,
         underwriter_reason=record.underwriter_reason,
+        underwriter_reason_code=record.underwriter_reason_code,
         underwriter_action_at=record.underwriter_action_at,
+        cost_usd=record.cost_usd,
+        record_hash=record.record_hash,
     )
 
 
@@ -73,6 +76,7 @@ def record_decision(
 
     record.underwriter_action = request.action
     record.underwriter_reason = request.reason
+    record.underwriter_reason_code = request.reason_code
     record.underwriter_action_at = datetime.utcnow()
     record.underwriter_user_id = current_user.id
     db.commit()

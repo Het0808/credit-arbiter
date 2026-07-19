@@ -1,6 +1,6 @@
 import time
 
-from src.api.services.regulatory import verify_regulatory
+from src.api.services.regulatory import SUB_CHECKS, verify_regulatory
 
 
 def test_same_application_id_always_returns_same_verdict():
@@ -27,3 +27,23 @@ def test_latency_stays_within_500ms_budget_including_retries():
     verify_regulatory("100001", force_fail=True)
     elapsed = time.monotonic() - start
     assert elapsed < 0.5
+
+
+def test_sub_checks_all_present_and_deterministic():
+    result = verify_regulatory("100002")
+    assert set(result["sub_checks"].keys()) == set(SUB_CHECKS)
+    assert all(v in {"PASS", "FAIL"} for v in result["sub_checks"].values())
+    assert verify_regulatory("100002")["sub_checks"] == result["sub_checks"]
+
+
+def test_overall_status_fails_if_any_sub_check_fails():
+    # Find an id whose sub-checks aren't all PASS, to prove overall FAIL
+    # actually reflects a real sub-check failure, not a fabricated aggregate.
+    for i in range(200):
+        result = verify_regulatory(str(i))
+        failed = [k for k, v in result["sub_checks"].items() if v == "FAIL"]
+        if failed:
+            assert result["status"] == "FAIL"
+            assert all(f in result["reason"] for f in failed)
+            return
+    assert False, "expected at least one FAIL sub-check across 200 sampled ids"

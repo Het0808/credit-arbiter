@@ -11,6 +11,12 @@ const alertBox = document.getElementById('alert-box');
 const logoutBtn = document.getElementById('logout-btn');
 const userInfo = document.getElementById('user-info');
 
+// Ops dashboard elements
+const showOpsBtn = document.getElementById('show-ops-btn');
+const opsBackBtn = document.getElementById('ops-back-btn');
+const opsView = document.getElementById('ops-view');
+const opsStatGrid = document.getElementById('ops-stat-grid');
+
 // Queue / detail / assess elements
 const queueView = document.getElementById('queue-view');
 const queueRows = document.getElementById('queue-rows');
@@ -24,13 +30,20 @@ const assessBtn = document.getElementById('assess-btn');
 const assessmentResult = document.getElementById('assessment-result');
 const escalationBanner = document.getElementById('escalation-banner');
 const resultRisk = document.getElementById('result-risk');
+const resultRiskFactors = document.getElementById('result-risk-factors');
+const resultScheme = document.getElementById('result-scheme');
 const resultClause = document.getElementById('result-clause');
+const resultPolicyRules = document.getElementById('result-policy-rules');
+const resultDocuments = document.getElementById('result-documents');
 const resultRegulatory = document.getElementById('result-regulatory');
+const resultFairness = document.getElementById('result-fairness');
+const resultExplanation = document.getElementById('result-explanation');
 const resultRecommendation = document.getElementById('result-recommendation');
 const decisionControls = document.getElementById('decision-controls');
 const acceptBtn = document.getElementById('accept-btn');
 const showOverrideBtn = document.getElementById('show-override-btn');
 const overrideForm = document.getElementById('override-form');
+const overrideReasonCode = document.getElementById('override-reason-code');
 const overrideReason = document.getElementById('override-reason');
 const submitOverrideBtn = document.getElementById('submit-override-btn');
 const decisionConfirmation = document.getElementById('decision-confirmation');
@@ -80,11 +93,19 @@ function showDashboard(email) {
 function showQueue() {
   queueView.classList.remove('hidden');
   detailView.classList.add('hidden');
+  opsView.classList.add('hidden');
 }
 
 function showDetail() {
   queueView.classList.add('hidden');
   detailView.classList.remove('hidden');
+  opsView.classList.add('hidden');
+}
+
+function showOps() {
+  queueView.classList.add('hidden');
+  detailView.classList.add('hidden');
+  opsView.classList.remove('hidden');
 }
 
 // Alerts
@@ -200,6 +221,56 @@ async function fetchQueue() {
   }
 }
 
+async function fetchMetrics() {
+  try {
+    const res = await fetch(`${API_BASE}/metrics`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to load ops metrics');
+    const metrics = await res.json();
+    renderMetrics(metrics);
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+function formatPercent(value) {
+  return value === null || value === undefined ? '-' : `${(value * 100).toFixed(1)}%`;
+}
+
+function renderMetrics(metrics) {
+  const recCounts = metrics.recommendation_counts || {};
+  const recSummary = Object.entries(recCounts).map(([k, v]) => `${k}: ${v}`).join(' &middot; ') || '-';
+
+  const cards = [
+    ['Throughput', metrics.throughput],
+    ['Recommendation Mix', recSummary],
+    ['Escalation Rate', formatPercent(metrics.escalation_rate)],
+    ['Acceptance Rate', formatPercent(metrics.acceptance_rate)],
+    ['Override Rate', formatPercent(metrics.override_rate)],
+    ['Avg Cost / Assessment', metrics.avg_cost_usd !== null ? `$${metrics.avg_cost_usd.toFixed(6)}` : '-'],
+    ['Avg Latency', metrics.avg_latency_ms !== null ? `${metrics.avg_latency_ms.toFixed(1)} ms` : '-'],
+    ['P95 Latency', metrics.p95_latency_ms !== null ? `${metrics.p95_latency_ms.toFixed(1)} ms` : '-'],
+    ['Cost Guardrail', `$${metrics.cost_guardrail_usd.toFixed(2)} / assessment`],
+    ['Fairness Hard-Block', `${metrics.fairness_hard_block_pp} pp`],
+    [
+      'Retrieval Failure Rate',
+      metrics.retrieval_failure_alert
+        ? `<span style="color:var(--error);font-weight:600">${formatPercent(metrics.retrieval_failure_rate)} (ALERT)</span>`
+        : formatPercent(metrics.retrieval_failure_rate),
+    ],
+  ];
+
+  opsStatGrid.innerHTML = cards
+    .map(([label, value]) => `
+      <div class="stat-card">
+        <div class="stat-label">${label}</div>
+        <div class="stat-value">${value}</div>
+      </div>
+    `)
+    .join('');
+}
+
 function renderQueue(applications) {
   queueRows.innerHTML = '';
   applications.forEach((application) => {
@@ -305,23 +376,82 @@ function renderAssessment(decision) {
     ? `<span class="badge ${bandClass}">${decision.risk_band}</span>&nbsp; ${(decision.risk_score * 100).toFixed(1)}% probability of default`
     : 'No risk score available';
 
-  if (decision.retrieved_clause_id) {
-    resultClause.innerHTML = `
-      <div class="clause-title">${decision.retrieved_clause_id}</div>
-      <div class="clause-text">${decision.retrieved_clause_text}</div>
-      <div class="clause-meta">Confidence: ${(decision.retrieval_confidence * 100).toFixed(1)}%</div>
-    `;
-  } else {
-    resultClause.innerHTML = '<span>No policy clause retrieved (retrieval failed)</span>';
-  }
+  const riskFactors = decision.evidence_chain?.risk_factors || [];
+  resultRiskFactors.innerHTML = riskFactors.length
+    ? riskFactors.map((factor) => {
+        const direction = factor.impact >= 0 ? 'factor-up' : 'factor-down';
+        const arrow = factor.impact >= 0 ? '&uarr;' : '&darr;';
+        return `
+          <div class="risk-factor ${direction}">
+            <span class="risk-factor-arrow">${arrow}</span>
+            <span class="risk-factor-label">${factor.label}</span>
+            <span class="risk-factor-value">${typeof factor.value === 'number' ? factor.value.toFixed(2) : factor.value ?? '-'}</span>
+          </div>
+        `;
+      }).join('')
+    : '<span>No risk factors available</span>';
 
-  resultRegulatory.textContent = decision.regulatory_status || '-';
+  const ev = decision.evidence_chain || {};
+
+  resultScheme.textContent = ev.loan_scheme || '-';
+
+  const allClauses = ev.retrieved_clauses && ev.retrieved_clauses.length
+    ? ev.retrieved_clauses
+    : (decision.retrieved_clause_id
+        ? [{ clause_id: decision.retrieved_clause_id, title: '', text: decision.retrieved_clause_text, score: decision.retrieval_confidence }]
+        : []);
+  resultClause.innerHTML = allClauses.length
+    ? allClauses.map((c) => `
+        <div class="clause-item">
+          <div class="clause-title">${c.clause_id}${c.title ? ' &mdash; ' + c.title : ''}</div>
+          <div class="clause-text">${c.text || ''}</div>
+          <div class="clause-meta">Confidence: ${((c.score || 0) * 100).toFixed(1)}%</div>
+        </div>
+      `).join('')
+    : '<span>No policy clause retrieved (retrieval failed)</span>';
+
+  const passedRules = ev.policy_passed_rules || [];
+  const failedRules = ev.policy_failed_rules || [];
+  resultPolicyRules.innerHTML = (passedRules.length + failedRules.length)
+    ? [
+        ...passedRules.map((r) => `<div class="rule-item rule-pass">&check; ${r.rule}: ${r.detail}</div>`),
+        ...failedRules.map((r) => `<div class="rule-item rule-fail">&cross; ${r.rule}: ${r.detail}</div>`),
+      ].join('')
+    : '<span>No scheme-specific numeric rules evaluated</span>';
+
+  const docVerification = ev.document_verification;
+  resultDocuments.innerHTML = docVerification
+    ? `
+        <div class="doc-status ${docVerification.complete ? 'doc-ok' : 'doc-missing'}">
+          ${docVerification.complete ? 'All required documents present' : 'Missing: ' + docVerification.missing_documents.join(', ')}
+        </div>
+        <div class="doc-status ${docVerification.consistent ? 'doc-ok' : 'doc-missing'}">
+          ${docVerification.consistent ? 'No consistency issues found' : 'Consistency findings: ' + docVerification.consistency_findings.join(', ')}
+        </div>
+      `
+    : '<span>-</span>';
+
+  const subChecks = ev.regulatory_sub_checks || {};
+  const subCheckKeys = Object.keys(subChecks);
+  resultRegulatory.innerHTML = `
+    <span class="badge badge-${(decision.regulatory_status || '').toLowerCase() === 'pass' ? 'approve' : 'decline'}">${decision.regulatory_status || '-'}</span>
+    ${subCheckKeys.length ? '<div class="sub-check-list">' + subCheckKeys.map((k) => `<span class="sub-check-item">${k}: ${subChecks[k]}</span>`).join('') + '</div>' : ''}
+  `;
+
+  const triggeredSegments = ev.fairness_triggered_segments || [];
+  resultFairness.innerHTML = ev.fairness_alert
+    ? `<div class="fairness-alert">Fairness alert: ${triggeredSegments.map((s) => `${s.attribute}=${s.subgroup} (${s.delta_pp > 0 ? '+' : ''}${s.delta_pp}pp)`).join(', ')}</div>`
+    : '<span>No fairness gap exceeding the 5pp guardrail</span>';
+
+  resultExplanation.innerHTML = ev.narrative_explanation
+    ? `<p>${ev.narrative_explanation}</p><div class="clause-meta">Source: ${ev.explanation_source}${ev.explanation_cost_usd ? ' &middot; $' + ev.explanation_cost_usd.toFixed(6) : ''}</div>`
+    : '<span>-</span>';
 
   const recommendationClass = `badge-${decision.recommendation.toLowerCase()}`;
   resultRecommendation.innerHTML = `<span class="badge ${recommendationClass}">${decision.recommendation}</span>`;
 }
 
-async function handleDecision(action, reason) {
+async function handleDecision(action, reason, reasonCode) {
   try {
     const res = await fetch(`${API_BASE}/assessments/${currentAssessmentId}/decision`, {
       method: 'POST',
@@ -329,7 +459,7 @@ async function handleDecision(action, reason) {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({ action, reason: reason || null })
+      body: JSON.stringify({ action, reason: reason || null, reason_code: reasonCode || null })
     });
 
     if (!res.ok) {
@@ -363,6 +493,8 @@ logoutBtn.addEventListener('click', () => {
 });
 
 backToQueueBtn.addEventListener('click', () => { showQueue(); fetchQueue(); });
+showOpsBtn.addEventListener('click', () => { showOps(); fetchMetrics(); });
+opsBackBtn.addEventListener('click', () => { showQueue(); fetchQueue(); });
 assessBtn.addEventListener('click', handleAssess);
 acceptBtn.addEventListener('click', () => handleDecision('accept'));
 showOverrideBtn.addEventListener('click', () => {
@@ -371,11 +503,12 @@ showOverrideBtn.addEventListener('click', () => {
 });
 submitOverrideBtn.addEventListener('click', () => {
   const reason = overrideReason.value.trim();
+  const reasonCode = overrideReasonCode.value;
   if (!reason) {
     showAlert('A reason is required to override a recommendation');
     return;
   }
-  handleDecision('override', reason);
+  handleDecision('override', reason, reasonCode);
 });
 
 // Start

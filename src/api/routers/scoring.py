@@ -23,10 +23,25 @@ def score(
         "amt_credit": application.amt_credit,
         "amt_annuity": application.amt_annuity,
         "days_employed": application.days_employed,
+        "ext_source_1": application.ext_source_1,
+        "ext_source_2": application.ext_source_2,
+        "ext_source_3": application.ext_source_3,
+        "cnt_fam_members": application.cnt_fam_members,
+        "amt_goods_price": application.amt_goods_price,
+        "cnt_children": application.cnt_children,
+        "name_contract_type": application.name_contract_type,
+        "flag_own_car": application.flag_own_car,
+        "flag_own_realty": application.flag_own_realty,
+        "name_income_type": application.name_income_type,
+        "name_education_type": application.name_education_type,
     }
     try:
-        probability, band = score_application(profile)
+        result = score_application(profile)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 
-    return {"probability": probability, "band": band}
+    return {
+        "probability": result["probability"],
+        "band": result["band"],
+        "top_risk_factors": result["top_risk_factors"],
+    }

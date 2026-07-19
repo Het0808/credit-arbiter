@@ -35,6 +35,22 @@ class Application(Base):
     name_family_status = Column(String, nullable=True)
     region_rating_client = Column(Integer, nullable=True)
     occupation_type = Column(String, nullable=True)
+
+    # ML-predictive fields added for the Sprint 2 trained risk model
+    # (src/risk_model/). Optional: gracefully imputed by the model pipeline
+    # when absent, never required for ingestion completeness.
+    ext_source_1 = Column(Float, nullable=True)
+    ext_source_2 = Column(Float, nullable=True)
+    ext_source_3 = Column(Float, nullable=True)
+    cnt_fam_members = Column(Float, nullable=True)
+    amt_goods_price = Column(Float, nullable=True)
+    cnt_children = Column(Integer, nullable=True)
+    flag_own_car = Column(String, nullable=True)
+    flag_own_realty = Column(String, nullable=True)
+    name_income_type = Column(String, nullable=True)
+
+    loan_scheme = Column(String, nullable=True)
+
     status = Column(String, default="INCOMPLETE")
     missing_fields = Column(String, nullable=True)
     raw_row_json = Column(Text, nullable=True)
@@ -72,8 +88,29 @@ class DecisionRecord(Base):
 
     underwriter_action = Column(String, nullable=True)  # accept | override
     underwriter_reason = Column(Text, nullable=True)
+    underwriter_reason_code = Column(String, nullable=True)
     underwriter_action_at = Column(DateTime, nullable=True)
     underwriter_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+
+    # Tamper-evidence hash chain (US-401): sha256(record content + previous
+    # record's hash). A POC-appropriate approximation of immutability, not
+    # true WORM storage.
+    record_hash = Column(String, nullable=True)
+    cost_usd = Column(Float, nullable=True)
+    latency_ms = Column(Float, nullable=True)
+
+
+class Document(Base):
+    """Uploaded applicant document (FR-5 / US-301)."""
+
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    application_id = Column(Integer, ForeignKey("applications.id"), nullable=False)
+    doc_type = Column(String, nullable=False)
+    filename = Column(String, nullable=False)
+    storage_path = Column(String, nullable=False)
+    uploaded_at = Column(DateTime, default=datetime.utcnow)
 
 
 class PolicyCorpusVersion(Base):
