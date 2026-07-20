@@ -239,6 +239,7 @@ async function openApplication(id) {
 
     renderDetail(application);
     assessmentResult.classList.add('hidden');
+    assessBtn.classList.remove('hidden');  // reset in case a prior decision hid it
     showDetail();
   } catch (error) {
     showAlert(error.message);
@@ -416,11 +417,17 @@ async function handleDecision(action, reason, reasonCode) {
     }
 
     const record = await res.json();
+    // A decision is final: lock the controls and prevent re-assessing this
+    // application (which would otherwise spawn fresh Accept/Override controls).
     decisionControls.classList.add('hidden');
     overrideForm.classList.add('hidden');
+    assessBtn.classList.add('hidden');
     decisionConfirmation.classList.remove('hidden');
+    const label = record.underwriter_action === 'override'
+      ? `Overridden (${record.underwriter_reason_code})`
+      : 'Accepted';
     decisionConfirmation.textContent =
-      `Recorded: ${record.underwriter_action} at ${new Date(record.underwriter_action_at).toLocaleString()}`;
+      `Decision recorded — ${label} at ${new Date(record.underwriter_action_at).toLocaleString()}. This is final.`;
     decisionConfirmation.style.color = 'var(--primary)';
     decisionConfirmation.style.borderColor = 'var(--primary)';
     decisionConfirmation.style.background = 'rgba(102, 252, 241, 0.1)';

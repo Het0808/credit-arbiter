@@ -41,6 +41,14 @@ def test_full_assess_decision_audit_flow(client, auth_headers, seeded_applicatio
     assert accept_response.status_code == 200
     assert accept_response.json()["underwriter_action"] == "accept"
 
+    # A decision is final: a second decision on the same assessment is rejected.
+    second = client.post(
+        f"/api/assessments/{assessment_id}/decision",
+        json={"action": "override", "reason": "changed my mind", "reason_code": "risk_appetite"},
+        headers=auth_headers,
+    )
+    assert second.status_code == 409
+
     audit_response = client.get(f"/api/assessments/{assessment_id}", headers=auth_headers)
     assert audit_response.status_code == 200
     audit = audit_response.json()

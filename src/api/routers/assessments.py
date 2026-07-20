@@ -137,6 +137,13 @@ def record_decision(
     if not record:
         raise HTTPException(status_code=404, detail="Assessment not found")
 
+    # A decision is a single, final input: reject any attempt to decide again.
+    if record.underwriter_action is not None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"This assessment was already {record.underwriter_action}ed and cannot be changed",
+        )
+
     if request.action == "override":
         if not request.reason:
             raise HTTPException(status_code=400, detail="A reason is required to override a recommendation")
