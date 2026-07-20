@@ -98,17 +98,27 @@ Halcyon Credit is a digital consumer lender building an **Agentic Underwriting C
 - **`decision_record` underwriter fields are updated in place** (not a separate insert-only audit_event table) when an underwriter accepts/overrides - matches the AC's literal "appended to the same record" wording. A stricter insert-only audit table is deferred to a later sprint.
 - **Recommendation rule table is a Sprint-1 simplification** of FR-3's full multi-scheme policy engine (out of scope until Sprint 2).
 
+## Production Integrations (pluggable, env-switched, graceful fallback)
+The three FR-2/FR-4/FR-9 pieces are wired so the app runs with lightweight defaults
+and upgrades to the production stack purely via env vars (see `.env.example`). Every
+integration falls back safely if its deps/services/keys are absent.
+
+| Concern | Default | Production | Switch |
+|---------|---------|-----------|--------|
+| **Score** (FR-2) | rule-based (`scoring.py`) | trained LightGBM (`predict.predict_from_features`) | `RISK_SCORER=ml` + `requirements-ml.txt` + model file |
+| **Policy retrieval** (FR-4) | TF-IDF in-memory | **Qdrant + embeddings** (`vector_retrieval.py`, fastembed) | `RETRIEVER=vector` + `requirements-rag.txt` + `QDRANT_URL` |
+| **Explanation** (FR-9) | deterministic grounded generator | **LLM via OpenRouter** (`llm_explanation.py`, PII-redacted, decision stays deterministic) | `LLM_PROVIDER=openrouter` + `OPENROUTER_API_KEY` + `requirements-llm.txt` |
+| **Database** | SQLite file | **PostgreSQL** (SQLAlchemy, `psycopg`) | `DATABASE_URL=postgresql+psycopg://…` |
+
+- Vector index: in-memory Qdrant indexes lazily at first query; for a Qdrant server run `python -m scripts.index_policies`.
+- `docker-compose.yml` starts Postgres + Qdrant locally.
+
 ## Environment Variables
-- Create a `.env` file at the root.
-- Required keys:
-  - `DATABASE_URL` (e.g., `sqlite:///./test.db` or `postgresql://user:pass@host/db`)
-  - `JWT_SECRET_KEY`
-  - `JWT_ALGORITHM`
-  - `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`
+- Copy `.env.example` to `.env`. Core keys: `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `JWT_ACCESS_TOKEN_EXPIRE_MINUTES`, `DATABASE_URL`.
+- Integration keys: `RISK_SCORER`, `RETRIEVER`, `QDRANT_URL`, `EMBEDDING_MODEL`, `LLM_PROVIDER`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL`.
 
 ## How to Run
-- **Seed the database** (idempotent, run once and any time `data/` changes): `python -m scripts.seed_db`
-- **Backend**: `source .venv/bin/activate && uvicorn src.api.main:app --reload --port 8000`
-- **Frontend**: `cd ui && npm run dev`
+- **Full stack (production-like)**: `docker compose up -d` (Postgres + Qdrant) → set `.env` (RETRIEVER=vector, RISK_SCORER=ml, LLM_PROVIDER=openrouter, DATABASE_URL=postgres) → `pip install -r requirements-ml.txt -r requirements-rag.txt -r requirements-llm.txt` → `python -m scripts.index_policies` → `uvicorn src.api.main:app --port 8000`.
+- **Lightweight (defaults)**: `uvicorn src.api.main:app --reload --port 8000` (SQLite + TF-IDF + rule-based + deterministic explanation; `requirements.txt` only).
+- **Frontend**: `cd ui && npm install && npm run dev`
 - **Tests**: `pytest` from the repo root
-- **Demo**: see `docs/demo_script.md` (includes the seeded demo underwriter login)

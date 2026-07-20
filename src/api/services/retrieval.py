@@ -16,10 +16,13 @@ the corpus grows well beyond a few schemes (assumption A-2).
 
 import glob
 import json
+import logging
 import os
 
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+_logger = logging.getLogger("halcyon.retrieval")
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 DATA_DIR = os.path.join(REPO_ROOT, "data")
@@ -215,8 +218,20 @@ def retrieve(query: str, scheme: str = None, top_k: int = 3, corpus_version: str
 
     ``scheme`` restricts candidates to one loan scheme (US-204). ``corpus_version``
     enables replay against an older corpus (US-207).
+
+    Backend selected by RETRIEVER: "vector" uses Qdrant + embeddings (semantic),
+    anything else uses TF-IDF. Vector retrieval falls back to TF-IDF on any error
+    (missing deps, Qdrant unavailable) so retrieval never hard-fails.
     """
-    return get_index(corpus_version).retrieve(query, scheme=scheme, top_k=top_k)
+    index = get_index(corpus_version)
+    if os.getenv("RETRIEVER", "tfidf").lower() == "vector":
+        try:
+            from .vector_retrieval import vector_retrieve
+
+            return vector_retrieve(index, query, scheme=scheme, top_k=top_k)
+        except Exception as exc:
+            _logger.warning("vector retrieval failed (%s); falling back to TF-IDF", exc)
+    return index.retrieve(query, scheme=scheme, top_k=top_k)
 
 
 def retrieve_for_profile(profile: dict, scheme: str = None, top_k: int = 3, corpus_version: str = None) -> dict:

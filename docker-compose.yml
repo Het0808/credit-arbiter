@@ -1,0 +1,33 @@
+# Local production-like stack: PostgreSQL (app DB) + Qdrant (vector RAG).
+# Start with:  docker compose up -d
+# Then point the app at them via .env (see .env.example):
+#   DATABASE_URL=postgresql+psycopg://halcyon:halcyon@localhost:5432/halcyon
+#   QDRANT_URL=http://localhost:6333
+#   RETRIEVER=vector
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: halcyon
+      POSTGRES_PASSWORD: halcyon
+      POSTGRES_DB: halcyon
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U halcyon"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"   # REST/gRPC
+    volumes:
+      - qdrantdata:/qdrant/storage
+
+volumes:
+  pgdata:
+  qdrantdata:

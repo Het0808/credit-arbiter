@@ -240,3 +240,7 @@ reports/ml/**/*.png
 # Uploaded documents (US-301) and aux feature cache (US-201)
 data/uploads/
 data/home_credit_data/aux_features.parquet
+
+# local dev DB + env
+local_dev.db
+.env

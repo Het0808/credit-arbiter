@@ -71,5 +71,19 @@ def generate_explanation(evidence_chain: dict, recommendation: str) -> dict:
         "source": "recommendation",
     })
 
-    narrative = " ".join(c["text"] for c in claims)
-    return {"narrative": narrative, "claims": claims, "recommendation": recommendation}
+    # Deterministic narrative (grounded by construction) is always available.
+    deterministic_narrative = " ".join(c["text"] for c in claims)
+
+    # Optionally upgrade the prose with an LLM (OpenRouter), grounded in the same
+    # claims and behind PII redaction; fall back to deterministic on any failure.
+    from .llm_explanation import maybe_llm_narrative
+
+    llm_narrative, generator = maybe_llm_narrative(claims, recommendation)
+    narrative = llm_narrative or deterministic_narrative
+
+    return {
+        "narrative": narrative,
+        "claims": claims,
+        "recommendation": recommendation,
+        "generator": generator,
+    }
