@@ -39,6 +39,18 @@ class ApplicationIngestRequest(BaseModel):
     REGION_RATING_CLIENT: Optional[str] = None
     OCCUPATION_TYPE: Optional[str] = None
 
+    # Additional inputs the trained ML model uses (optional; supply for ML scoring).
+    # In production EXT_SOURCE_* come from an external credit bureau.
+    AMT_GOODS_PRICE: Optional[str] = None
+    CNT_FAM_MEMBERS: Optional[str] = None
+    CNT_CHILDREN: Optional[str] = None
+    EXT_SOURCE_1: Optional[str] = None
+    EXT_SOURCE_2: Optional[str] = None
+    EXT_SOURCE_3: Optional[str] = None
+    FLAG_OWN_CAR: Optional[str] = None
+    FLAG_OWN_REALTY: Optional[str] = None
+    NAME_INCOME_TYPE: Optional[str] = None
+
 
 class ApplicationSummary(BaseModel):
     id: int

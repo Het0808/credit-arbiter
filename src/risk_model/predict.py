@@ -12,12 +12,24 @@ from typing import Union, List, Dict, Any
 import numpy as np
 import pandas as pd
 from src.risk_model.aux_features import merge_aux_features
+from src.risk_model.aux_features import merge_aux_features  # noqa: F401 (kept for callers)
 from src.risk_model.config import ModelConfig
 from src.risk_model.preprocess import (
     load_raw_data,
     prepare_pipeline_data,
 )
-from src.risk_model.shap_explain import get_attribution_explanation
+# NOTE: shap_explain is imported lazily inside run_applicant_inference so that
+# importing this module for live inference does not pull in shap/matplotlib.
+
+# Raw Home Credit columns the trained pipeline consumes for a single applicant.
+NUMERIC_RAW_INPUTS = [
+    "AMT_INCOME_TOTAL", "AMT_CREDIT", "AMT_ANNUITY", "AMT_GOODS_PRICE", "DAYS_BIRTH",
+    "DAYS_EMPLOYED", "CNT_FAM_MEMBERS", "CNT_CHILDREN", "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3",
+]
+CATEGORICAL_RAW_INPUTS = [
+    "NAME_CONTRACT_TYPE", "CODE_GENDER", "FLAG_OWN_CAR", "FLAG_OWN_REALTY",
+    "NAME_INCOME_TYPE", "NAME_EDUCATION_TYPE",
+]
 
 
 # Default path variables
@@ -173,7 +185,10 @@ def run_applicant_inference(
     # 5. Classify risk band
     risk_band = calculate_risk_band(prob, low_threshold, high_threshold)
     
-    # 6. Retrieve explanation factors
+    # 6. Retrieve explanation factors (lazy import keeps shap/matplotlib out of
+    # the live-inference / API import path).
+    from src.risk_model.shap_explain import get_attribution_explanation
+
     explanation = get_attribution_explanation(application_id)
     top_factors = explanation.get("top_risk_drivers", [])
     
@@ -188,6 +203,60 @@ def run_applicant_inference(
     }
     
     return result
+
+
+def _load_metadata() -> Dict[str, str]:
+    model_version, model_type = "v1", "LightGBM"
+    if PROD_METADATA_PATH.exists():
+        try:
+            with open(PROD_METADATA_PATH, "r") as f:
+                meta = json.load(f)
+                model_version = meta.get("selected_model_version", model_version)
+                model_type = meta.get("selected_model_name", model_type)
+        except Exception:
+            pass
+    return {"model_version": model_version, "model_type": model_type}
+
+
+def predict_from_features(
+    raw_row: Dict[str, Any],
+    low_threshold: float = 0.36,
+    high_threshold: float = 0.66,
+    model: Any = None,
+) -> Dict[str, Any]:
+    """Score a brand-new application from its raw Home-Credit-shaped fields.
+
+    Unlike run_applicant_inference (which looks an applicant up by ID in the
+    historical dataset), this builds a one-row frame from the supplied fields,
+    runs the exact trained preprocessing + model pipeline, and returns the
+    probability of default and risk band. Missing inputs are tolerated: numeric
+    gaps are imputed by the fitted pipeline and applicants with no credit
+    history get 0-filled auxiliary aggregates.
+
+    Args:
+        raw_row: dict keyed by Home Credit column names (e.g. AMT_INCOME_TOTAL,
+            EXT_SOURCE_1, NAME_CONTRACT_TYPE, SK_ID_CURR ...). Extra keys ignored.
+    """
+    config = ModelConfig()
+    if model is None:
+        model = load_model(PROD_MODEL_PATH)
+
+    df = pd.DataFrame([dict(raw_row)])
+    # Ensure every column the feature engineering / pipeline expects is present.
+    for col in NUMERIC_RAW_INPUTS + CATEGORICAL_RAW_INPUTS + [config.ID_COLUMN]:
+        if col not in df.columns:
+            df[col] = np.nan
+    for col in NUMERIC_RAW_INPUTS + [config.ID_COLUMN]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    X, _, _ = prepare_pipeline_data(df, config)
+    # Guarantee the exact trained feature set + order; anything missing becomes
+    # NaN and is imputed by the fitted preprocessor inside the pipeline.
+    X = X.reindex(columns=config.NUMERICAL_FEATURES + config.CATEGORICAL_FEATURES)
+
+    prob = float(predict_probability(model, X)[0])
+    band = calculate_risk_band(prob, low_threshold, high_threshold)
+    return {"risk_score": float(np.round(prob, 4)), "risk_band": band, **_load_metadata()}
 
 
 if __name__ == "__main__":

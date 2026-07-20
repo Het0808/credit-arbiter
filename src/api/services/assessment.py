@@ -14,10 +14,14 @@ Layers enforced here:
 """
 
 import json
+import logging
+import os
 
 from sqlalchemy.orm import Session
 
 from ..models import Application, DecisionRecord
+
+logger = logging.getLogger("halcyon.assessment")
 from .audit_log import append_event
 from .cost_meter import estimate_cost, estimate_explanation_tokens
 from .document_service import verify_documents
@@ -58,16 +62,50 @@ def _profile_from_application(application: Application) -> dict:
     }
 
 
+def _ml_risk(application: Application):
+    """Score the application with the trained model, or None to fall back.
+
+    Enabled only when RISK_SCORER=ml (so the default/light deployment and the
+    tests keep the deterministic rule-based scorer). Returns (probability,
+    'Low'|'Medium'|'High') on success; None on any problem (feature libs or the
+    model file absent, no raw application fields, etc.) so the caller falls back
+    to the rule-based scorer rather than failing the assessment.
+    """
+    if os.getenv("RISK_SCORER", "rule").lower() != "ml":
+        return None
+    if not application.raw_row_json:
+        return None
+    try:
+        from src.risk_model.predict import predict_from_features
+
+        result = predict_from_features(json.loads(application.raw_row_json))
+        # Normalise the model's band (LOW/MEDIUM/HIGH) to the app's Title case.
+        return result["risk_score"], result["risk_band"].title()
+    except Exception as exc:  # missing deps/model/fields -> graceful fallback
+        logger.warning("ML scorer unavailable, falling back to rule-based: %s", exc)
+        return None
+
+
 def run_assessment(db: Session, application: Application, force_regulatory_fail: bool = False) -> DecisionRecord:
     profile = _profile_from_application(application)
     scheme = application.loan_scheme or DEFAULT_SCHEME
 
     # --- Risk (component 1) + risk factors (component 2) ---
+    # Prefer the trained ML model on the application's raw fields (US-201/FR-2);
+    # fall back to the deterministic rule-based scorer when the model isn't
+    # available or the inputs are insufficient.
     risk_score = risk_band = None
-    try:
-        risk_score, risk_band = score_application(profile)
-    except (ValueError, TypeError):
-        pass
+    scorer_used = None
+    ml = _ml_risk(application)
+    if ml is not None:
+        risk_score, risk_band = ml
+        scorer_used = "ml_model"
+    else:
+        try:
+            risk_score, risk_band = score_application(profile)
+            scorer_used = "rule_based"
+        except (ValueError, TypeError):
+            scorer_used = None
     risk_factors = explain_score(profile)
     model_confidence = max(risk_score, 1 - risk_score) if risk_score is not None else None
 
@@ -161,6 +199,7 @@ def run_assessment(db: Session, application: Application, force_regulatory_fail:
         "risk_score": risk_score,
         "risk_band": risk_band,
         "model_confidence": round(model_confidence, 4) if model_confidence is not None else None,
+        "scorer": scorer_used,
         "risk_factors": risk_factors,
         "loan_scheme": scheme,
         "policy_version": corpus_version,

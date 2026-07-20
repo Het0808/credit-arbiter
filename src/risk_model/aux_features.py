@@ -107,10 +107,27 @@ def _aggregate_credit_card() -> pd.DataFrame:
     return out
 
 
+def _empty_aux_frame() -> pd.DataFrame:
+    """An aux frame with the right columns but no rows, so merge_aux_features
+    0-fills every aggregate. Used when the source tables are unavailable (e.g.
+    a serving environment that ships only the trained model, not the raw data)."""
+    from src.risk_model.config import ModelConfig
+
+    return pd.DataFrame(columns=[ID] + list(ModelConfig.AUX_FEATURES))
+
+
 def build_aux_features(force: bool = False) -> pd.DataFrame:
-    """Build (or load cached) per-applicant auxiliary aggregate features."""
+    """Build (or load cached) per-applicant auxiliary aggregate features.
+
+    Returns an empty (0-fill) frame when neither the parquet cache nor the raw
+    source CSVs are present, so single-application inference works without the
+    full Home Credit dataset on disk.
+    """
     if AUX_CACHE.exists() and not force:
         return pd.read_parquet(AUX_CACHE)
+
+    if not (BUREAU_CSV.exists() and PREV_APP_CSV.exists()):
+        return _empty_aux_frame()
 
     aux = _aggregate_bureau()
     for part in (_aggregate_previous_application(), _aggregate_installments(),
