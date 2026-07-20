@@ -466,6 +466,59 @@ clauseModal.addEventListener('click', (e) => {
   if (e.target === clauseModal) clauseModal.classList.add('hidden');
 });
 
+// --- New application ingestion form ---
+const newAppBtn = document.getElementById('new-app-btn');
+const ingestModal = document.getElementById('ingest-modal');
+const ingestClose = document.getElementById('ingest-close');
+const ingestForm = document.getElementById('ingest-form');
+const ingestError = document.getElementById('ingest-error');
+const ingestSubmit = document.getElementById('ingest-submit');
+
+function openIngest() {
+  ingestForm.reset();
+  ingestError.classList.add('hidden');
+  ingestModal.classList.remove('hidden');
+}
+function closeIngest() { ingestModal.classList.add('hidden'); }
+
+newAppBtn.addEventListener('click', openIngest);
+ingestClose.addEventListener('click', closeIngest);
+ingestModal.addEventListener('click', (e) => { if (e.target === ingestModal) closeIngest(); });
+
+ingestForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  ingestError.classList.add('hidden');
+
+  // Collect only the non-blank fields into a Home-Credit-shaped payload.
+  const payload = {};
+  new FormData(ingestForm).forEach((value, key) => {
+    const trimmed = String(value).trim();
+    if (trimmed !== '') payload[key] = trimmed;
+  });
+
+  ingestSubmit.disabled = true;
+  try {
+    const res = await fetch(`${API_BASE}/applications/ingest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      let detail = 'Failed to create application';
+      try { const j = await res.json(); detail = j.detail || detail; } catch (_) { /* ignore */ }
+      throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    }
+    closeIngest();
+    showAlert('Application created and added to the queue.', false);
+    fetchQueue();
+  } catch (err) {
+    ingestError.textContent = err.message;
+    ingestError.classList.remove('hidden');
+  } finally {
+    ingestSubmit.disabled = false;
+  }
+});
+
 // --- Ops dashboard (US-407) ---
 const opsToggleBtn = document.getElementById('ops-toggle-btn');
 const opsPanel = document.getElementById('ops-panel');

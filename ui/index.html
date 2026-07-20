@@ -75,7 +75,10 @@
 
           <!-- Application Queue -->
           <div id="queue-view">
-            <h3 class="section-heading">Application Queue</h3>
+            <div class="queue-header">
+              <h3 class="section-heading">Application Queue</h3>
+              <button id="new-app-btn" class="btn primary-btn">＋ New Application</button>
+            </div>
             <table class="queue-table">
               <thead>
                 <tr>
@@ -167,6 +170,116 @@
         <div id="clause-modal-body"></div>
       </div>
     </div>
+
+    <!-- New application ingestion form -->
+    <div id="ingest-modal" class="clause-modal hidden">
+      <div class="clause-modal-card ingest-card glass-panel">
+        <button id="ingest-close" class="clause-modal-close">&times;</button>
+        <h3 class="section-heading">New Application</h3>
+        <p class="ingest-hint">Fields marked * are required. Others improve the ML risk model
+          (leave blank if unknown — the model imputes them). Day fields use Home Credit convention:
+          negative = days before today (e.g. DAYS_EMPLOYED −2200 ≈ 6 years employed).</p>
+
+        <form id="ingest-form">
+          <div class="ingest-section-label">Identity &amp; Loan</div>
+          <div class="ingest-grid">
+            <label>Applicant ID (SK_ID_CURR) *
+              <input name="SK_ID_CURR" required placeholder="900001" />
+            </label>
+            <label>Contract type
+              <select name="NAME_CONTRACT_TYPE">
+                <option value="Cash loans">Cash loans</option>
+                <option value="Revolving loans">Revolving loans</option>
+              </select>
+            </label>
+            <label>Loan scheme
+              <select name="loan_scheme">
+                <option>Personal Loan</option>
+                <option>Education Loan</option>
+                <option>Vehicle Loan</option>
+                <option>Business Loan</option>
+                <option>First-Time Buyer Loan</option>
+                <option>Low-Income Loan</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="ingest-section-label">Income &amp; Affordability</div>
+          <div class="ingest-grid">
+            <label>Annual income (AMT_INCOME_TOTAL) *
+              <input name="AMT_INCOME_TOTAL" type="number" step="any" required placeholder="180000" />
+            </label>
+            <label>Credit amount (AMT_CREDIT) *
+              <input name="AMT_CREDIT" type="number" step="any" required placeholder="450000" />
+            </label>
+            <label>Annuity (AMT_ANNUITY) *
+              <input name="AMT_ANNUITY" type="number" step="any" required placeholder="24000" />
+            </label>
+            <label>Goods price (AMT_GOODS_PRICE)
+              <input name="AMT_GOODS_PRICE" type="number" step="any" placeholder="420000" />
+            </label>
+            <label>Days employed (DAYS_EMPLOYED) *
+              <input name="DAYS_EMPLOYED" type="number" required placeholder="-2200" />
+            </label>
+          </div>
+
+          <div class="ingest-section-label">Credit-Bureau Scores (external)</div>
+          <div class="ingest-grid">
+            <label>EXT_SOURCE_1 <input name="EXT_SOURCE_1" type="number" step="any" min="0" max="1" placeholder="0.60" /></label>
+            <label>EXT_SOURCE_2 <input name="EXT_SOURCE_2" type="number" step="any" min="0" max="1" placeholder="0.55" /></label>
+            <label>EXT_SOURCE_3 <input name="EXT_SOURCE_3" type="number" step="any" min="0" max="1" placeholder="0.50" /></label>
+          </div>
+
+          <div class="ingest-section-label">Household &amp; Assets</div>
+          <div class="ingest-grid">
+            <label>Family members (CNT_FAM_MEMBERS) <input name="CNT_FAM_MEMBERS" type="number" placeholder="2" /></label>
+            <label>Children (CNT_CHILDREN) <input name="CNT_CHILDREN" type="number" placeholder="0" /></label>
+            <label>Income type (NAME_INCOME_TYPE)
+              <select name="NAME_INCOME_TYPE">
+                <option value=""></option>
+                <option>Working</option><option>Commercial associate</option>
+                <option>Pensioner</option><option>State servant</option><option>Student</option>
+              </select>
+            </label>
+            <label>Education (NAME_EDUCATION_TYPE)
+              <select name="NAME_EDUCATION_TYPE">
+                <option value=""></option>
+                <option>Secondary / secondary special</option><option>Higher education</option>
+                <option>Incomplete higher</option><option>Lower secondary</option>
+              </select>
+            </label>
+            <label>Owns a car (FLAG_OWN_CAR)
+              <select name="FLAG_OWN_CAR"><option value=""></option><option>Y</option><option>N</option></select>
+            </label>
+            <label>Owns realty (FLAG_OWN_REALTY)
+              <select name="FLAG_OWN_REALTY"><option value=""></option><option>Y</option><option>N</option></select>
+            </label>
+          </div>
+
+          <div class="ingest-section-label">Demographics (fairness audit only — never scored)</div>
+          <div class="ingest-grid">
+            <label>Date-of-birth days (DAYS_BIRTH) <input name="DAYS_BIRTH" type="number" placeholder="-13000" /></label>
+            <label>Gender (CODE_GENDER)
+              <select name="CODE_GENDER"><option value=""></option><option>M</option><option>F</option></select>
+            </label>
+            <label>Region rating (REGION_RATING_CLIENT)
+              <select name="REGION_RATING_CLIENT"><option value=""></option><option>1</option><option>2</option><option>3</option></select>
+            </label>
+            <label>Family status (NAME_FAMILY_STATUS)
+              <select name="NAME_FAMILY_STATUS">
+                <option value=""></option><option>Married</option><option>Single / not married</option>
+                <option>Civil marriage</option><option>Separated</option><option>Widow</option>
+              </select>
+            </label>
+            <label>Occupation (OCCUPATION_TYPE) <input name="OCCUPATION_TYPE" placeholder="Core staff" /></label>
+          </div>
+
+          <div id="ingest-error" class="alert hidden"></div>
+          <button type="submit" id="ingest-submit" class="btn primary-btn">Create &amp; add to queue</button>
+        </form>
+      </div>
+    </div>
+
     <div class="background-elements">
       <div class="blob blob-1"></div>
       <div class="blob blob-2"></div>

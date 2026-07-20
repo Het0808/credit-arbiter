@@ -34,6 +34,7 @@ def normalize_row(row: dict) -> dict:
     profile = {
         "external_id": (row.get("SK_ID_CURR") or "").strip() or None,
         "name_contract_type": row.get("NAME_CONTRACT_TYPE") or None,
+        "loan_scheme": row.get("loan_scheme") or "Personal Loan",
         "name_education_type": row.get("NAME_EDUCATION_TYPE") or None,
         "name_family_status": row.get("NAME_FAMILY_STATUS") or None,
         "occupation_type": row.get("OCCUPATION_TYPE") or None,
