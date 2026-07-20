@@ -22,9 +22,12 @@ body {
   color: var(--text-main);
   min-height: 100vh;
   display: flex;
-  align-items: center;
+  /* Top-align so tall content (e.g. the evidence panel after Assess) can scroll
+     instead of overflowing a vertically-centred box that clips it. */
+  align-items: flex-start;
   justify-content: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   position: relative;
 }
 
@@ -76,7 +79,7 @@ body {
   z-index: 1;
   width: 100%;
   max-width: 420px;
-  padding: 20px;
+  padding: 40px 20px;
   transition: max-width 0.3s ease;
 }
 
