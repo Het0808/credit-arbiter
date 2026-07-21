@@ -1,4 +1,8 @@
-const API_BASE = 'http://localhost:8000/api';
+// Local dev (Vite on :5173) talks to the backend on :8000; when deployed, the
+// frontend is served same-origin behind nginx, which proxies /api to the backend.
+const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+  ? 'http://localhost:8000/api'
+  : '/api';
 
 // DOM Elements
 const appEl = document.getElementById('app');

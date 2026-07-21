@@ -4,8 +4,8 @@ WORKDIR /ui
 COPY ui/package.json ui/package-lock.json* ./
 RUN npm install
 COPY ui/ ./
-# Point the frontend at same-origin /api (nginx proxies it to the api container).
-RUN sed -i "s#http://localhost:8000/api#/api#" main.js && npm run build
+# API_BASE auto-selects same-origin /api when not on localhost (see main.js).
+RUN npm run build
 
 FROM nginx:alpine
 COPY --from=build /ui/dist /usr/share/nginx/html
