@@ -2,5 +2,6 @@
 # Enable with RETRIEVER=vector. Qdrant runs in-memory by default (QDRANT_URL
 # unset) or against a server (set QDRANT_URL, e.g. http://localhost:6333).
 # fastembed provides local ONNX embeddings (no API key, no torch).
+# qdrant-client 1.18 pulls fastembed 0.8 which supports numpy 2 (matches ML deps).
 -r requirements.txt
-qdrant-client[fastembed]==1.12.1
+qdrant-client[fastembed]==1.18.0

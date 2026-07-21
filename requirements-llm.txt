@@ -1,4 +1,4 @@
 # LLM explanation dependencies (OpenRouter, OpenAI-compatible API).
 # Enable with LLM_PROVIDER=openrouter and OPENROUTER_API_KEY set.
 -r requirements.txt
-openai==1.54.4
+openai==2.46.0
