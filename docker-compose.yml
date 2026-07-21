@@ -1,9 +1,9 @@
-# Local production-like stack: PostgreSQL (app DB) + Qdrant (vector RAG).
-# Start with:  docker compose up -d
-# Then point the app at them via .env (see .env.example):
-#   DATABASE_URL=postgresql+psycopg://halcyon:halcyon@localhost:5432/halcyon
-#   QDRANT_URL=http://localhost:6333
-#   RETRIEVER=vector
+# Full stack: web (nginx+frontend) → api (FastAPI+ML+RAG+LLM) → postgres + qdrant.
+# Local:  OPENROUTER_API_KEY=... JWT_SECRET_KEY=... docker compose up -d --build
+# Then open http://localhost  (API is proxied at http://localhost/api).
+#
+# Secrets/config come from the shell env or a .env file (auto-read by compose for
+# ${VAR} substitution). NEVER bake OPENROUTER_API_KEY into an image.
 services:
   postgres:
     image: postgres:16
@@ -24,9 +24,39 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     ports:
-      - "6333:6333"   # REST/gRPC
+      - "6333:6333"
     volumes:
       - qdrantdata:/qdrant/storage
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: postgresql+psycopg://halcyon:halcyon@postgres:5432/halcyon
+      QDRANT_URL: http://qdrant:6333
+      RISK_SCORER: ml
+      RETRIEVER: vector
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-prod}
+      JWT_ALGORITHM: HS256
+      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: "1440"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile.web
+    ports:
+      - "80:80"
+    depends_on:
+      - api
 
 volumes:
   pgdata:

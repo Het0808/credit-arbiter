@@ -1,0 +1,17 @@
+# Keep the build context small + never ship dev cruft / big data / secrets.
+.git
+.venv
+ui/node_modules
+ui/dist
+**/__pycache__
+.pytest_cache
+mlruns
+reports
+notebooks
+data/home_credit_data
+data/uploads
+data/home_credit_data/aux_features.parquet
+*.db
+.env
+tests
+docs
