@@ -6,6 +6,8 @@ from sqlalchemy.orm import Session
 
 from ..auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
+    APPLICANT,
+    VALID_ROLES,
     create_access_token,
     get_current_user,
     get_password_hash,
@@ -24,8 +26,12 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     if db_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
+    role = (user.role or APPLICANT).lower()
+    if role not in VALID_ROLES:
+        raise HTTPException(status_code=400, detail=f"Invalid role. Allowed: {sorted(VALID_ROLES)}")
+
     hashed_password = get_password_hash(user.password)
-    new_user = User(email=user.email, hashed_password=hashed_password)
+    new_user = User(email=user.email, hashed_password=hashed_password, role=role)
     db.add(new_user)
     db.commit()
     db.refresh(new_user)

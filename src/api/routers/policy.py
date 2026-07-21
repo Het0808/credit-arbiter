@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..auth import require_ops
 from ..database import get_db
 from ..models import Application, User
 from ..schemas import (
@@ -31,7 +31,7 @@ def _profile(application: Application) -> dict:
 def retrieve_policy(
     request: PolicyRetrieveRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     if request.query:
         return retrieval_service.retrieve(
@@ -54,7 +54,7 @@ def retrieve_policy(
 def evaluate_policy_for_application(
     request: PolicyEvaluateRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     application = db.query(Application).filter(Application.id == request.application_id).first()
     if not application:
@@ -70,13 +70,13 @@ def evaluate_policy_for_application(
 
 
 @router.get("/versions")
-def policy_versions(current_user: User = Depends(get_current_user)):
+def policy_versions(current_user: User = Depends(require_ops)):
     """List all available corpus versions and which one is active (US-207)."""
     return retrieval_service.list_versions()
 
 
 @router.get("/corpus")
-def active_corpus(current_user: User = Depends(get_current_user)):
+def active_corpus(current_user: User = Depends(require_ops)):
     return retrieval_service.corpus_metadata()
 
 
@@ -84,7 +84,7 @@ def active_corpus(current_user: User = Depends(get_current_user)):
 def get_clause(
     clause_id: str,
     corpus_version: str | None = None,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     """Return a single clause's text + version for citation display (US-309)."""
     clause = retrieval_service.get_clause(clause_id, corpus_version)
@@ -96,7 +96,7 @@ def get_clause(
 @router.post("/reindex")
 def reindex_policy(
     request: PolicyReindexRequest,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     """Manual re-index trigger: re-scan data/ and activate a corpus version (US-207)."""
     try:

@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..auth import require_ops
 from ..database import get_db
 from ..models import Application, Document, User
 from ..schemas import DocumentOut, DocumentVerificationResponse
@@ -27,7 +27,7 @@ async def upload_document(
     declared_income: Optional[float] = Form(None),
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     application = _get_application(db, application_id)
     content = await file.read()
@@ -51,7 +51,7 @@ async def upload_document(
 def list_documents(
     application_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     _get_application(db, application_id)
     return (
@@ -66,7 +66,7 @@ def list_documents(
 def verify_application_documents(
     application_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     application = _get_application(db, application_id)
     return verify_documents(db, application)

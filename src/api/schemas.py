@@ -10,6 +10,9 @@ from pydantic import BaseModel, ConfigDict
 class UserCreate(BaseModel):
     email: str
     password: str
+    # POC: role is chosen at registration ("applicant" or "underwriter").
+    # In production, ops/underwriter accounts would be admin-provisioned.
+    role: Optional[str] = "applicant"
 
 
 class Token(BaseModel):
@@ -61,6 +64,19 @@ class ApplicationSummary(BaseModel):
     status: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ApplicationStatus(BaseModel):
+    """Applicant-facing view: their application + its decision status."""
+
+    id: int
+    external_id: str
+    loan_scheme: Optional[str] = None
+    amt_credit: Optional[float] = None
+    amt_income_total: Optional[float] = None
+    status: str  # ingestion completeness (COMPLETE / INCOMPLETE)
+    decision_status: str  # Pending / Approved / Denied
+    created_at: datetime
 
 
 class ApplicationDetail(ApplicationSummary):

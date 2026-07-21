@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..auth import require_ops
 from ..database import get_db
 from ..models import User
 from ..services import kill_switch
@@ -17,13 +17,13 @@ class KillSwitchRequest(BaseModel):
 
 
 @router.get("/dashboard")
-def dashboard(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def dashboard(db: Session = Depends(get_db), current_user: User = Depends(require_ops)):
     """PRD §8 operations KPIs with thresholds + alerts (US-407)."""
     return compute_dashboard(db)
 
 
 @router.get("/kill-switch")
-def kill_switch_status(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def kill_switch_status(db: Session = Depends(get_db), current_user: User = Depends(require_ops)):
     return kill_switch.status(db)
 
 
@@ -31,14 +31,14 @@ def kill_switch_status(db: Session = Depends(get_db), current_user: User = Depen
 def set_kill_switch(
     request: KillSwitchRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     """Operator kill-switch: when active, all new assessments route to humans (US-405)."""
     return kill_switch.set_kill_switch(db, request.active, actor=current_user.email)
 
 
 @router.get("/audit/verify")
-def audit_verify(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def audit_verify(db: Session = Depends(get_db), current_user: User = Depends(require_ops)):
     """Verify the immutable audit chain integrity (US-401)."""
     return verify_chain(db)
 
@@ -47,7 +47,7 @@ def audit_verify(db: Session = Depends(get_db), current_user: User = Depends(get
 def audit_reconstruct(
     decision_record_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     events = reconstruct(db, decision_record_id)
     if not events:

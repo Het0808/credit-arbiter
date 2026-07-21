@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..auth import require_ops
 from ..database import get_db
 from ..models import Application, DecisionRecord, User
 from ..schemas import (
@@ -51,7 +51,7 @@ def _to_decision_record_out(record: DecisionRecord) -> DecisionRecordOut:
 
 @assess_router.post("/assess", response_model=DecisionRecordOut)
 def assess(
-    request: AssessRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    request: AssessRequest, db: Session = Depends(get_db), current_user: User = Depends(require_ops)
 ):
     application = db.query(Application).filter(Application.id == request.application_id).first()
     if not application:
@@ -62,7 +62,7 @@ def assess(
 
 
 @router.get("/queue/human-review", response_model=list[HumanReviewItem])
-def human_review_queue(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def human_review_queue(db: Session = Depends(get_db), current_user: User = Depends(require_ops)):
     """Escalated decisions awaiting human review (FR-11 / US-306).
 
     An item is any escalated decision (escalation_flag) not yet actioned by an
@@ -89,7 +89,7 @@ def human_review_queue(db: Session = Depends(get_db), current_user: User = Depen
 
 
 @router.get("/metrics/override-rate")
-def override_rate(days: int = 7, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def override_rate(days: int = 7, db: Session = Depends(get_db), current_user: User = Depends(require_ops)):
     """Override-rate metric over the trailing window (US-308)."""
     since = datetime.utcnow() - timedelta(days=days)
     actioned = db.query(DecisionRecord).filter(
@@ -107,7 +107,7 @@ def override_rate(days: int = 7, db: Session = Depends(get_db), current_user: Us
 
 @router.get("/{assessment_id}", response_model=DecisionRecordOut)
 def get_assessment(
-    assessment_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    assessment_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_ops)
 ):
     record = db.query(DecisionRecord).filter(DecisionRecord.id == assessment_id).first()
     if not record:
@@ -117,7 +117,7 @@ def get_assessment(
 
 @router.get("/{assessment_id}/explanation")
 def get_explanation(
-    assessment_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    assessment_id: int, db: Session = Depends(get_db), current_user: User = Depends(require_ops)
 ):
     """Grounded narrative explanation assembled from the stored evidence (US-208 stand-in)."""
     record = db.query(DecisionRecord).filter(DecisionRecord.id == assessment_id).first()
@@ -131,7 +131,7 @@ def record_decision(
     assessment_id: int,
     request: DecisionRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_ops),
 ):
     record = db.query(DecisionRecord).filter(DecisionRecord.id == assessment_id).first()
     if not record:

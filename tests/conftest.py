@@ -93,8 +93,21 @@ def client():
 
 @pytest.fixture
 def auth_headers(client):
+    """Ops/underwriter auth headers (the role most endpoints require)."""
     response = client.post(
-        "/api/auth/register", json={"email": "underwriter@test.com", "password": "testpass123"}
+        "/api/auth/register",
+        json={"email": "underwriter@test.com", "password": "testpass123", "role": "underwriter"},
+    )
+    token = response.json()["access_token"]
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def applicant_headers(client):
+    """Applicant auth headers (limited to their own applications)."""
+    response = client.post(
+        "/api/auth/register",
+        json={"email": "applicant@test.com", "password": "testpass123", "role": "applicant"},
     )
     token = response.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

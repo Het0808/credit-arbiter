@@ -10,7 +10,7 @@ Halcyon Credit is a digital consumer lender building an **Agentic Underwriting C
    - Located in `src/api/`, split into `routers/` (HTTP layer) and `services/` (pure, testable business logic).
    - Used for ML inference, RAG policy evaluation, and serving API endpoints.
    - **Database**: PostgreSQL (currently using a local SQLite `test.db` fallback for development) handled by `SQLAlchemy`.
-   - **Authentication**: Custom JWT-based authentication using `PyJWT` and `passlib[bcrypt]`.
+   - **Authentication + RBAC**: Custom JWT auth (`PyJWT` + `passlib[bcrypt]`) with two roles — `applicant` (creates/sees only their own applications via `Application.owner_id`, views decision status Pending/Approved/Denied at `GET /applications/my`) and `underwriter` (ops: sees all applications, assess/decide, ops/fairness/policy/dashboard tools). Ops endpoints are gated by `require_ops` (403 otherwise). Role is chosen at registration (POC; production would admin-provision ops accounts).
 
 2. **Frontend (Vanilla HTML/JS + Vite)**:
    - Located in `ui/`.

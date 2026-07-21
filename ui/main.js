@@ -11,6 +11,14 @@ const alertBox = document.getElementById('alert-box');
 const logoutBtn = document.getElementById('logout-btn');
 const userInfo = document.getElementById('user-info');
 
+// Role-based UI
+let currentRole = null;
+const regRole = document.getElementById('reg-role');
+const applicantView = document.getElementById('applicant-view');
+const applicantRows = document.getElementById('applicant-rows');
+const applicantEmpty = document.getElementById('applicant-empty');
+const applicantNewAppBtn = document.getElementById('applicant-new-app-btn');
+
 // Queue / detail / assess elements
 const queueView = document.getElementById('queue-view');
 const queueRows = document.getElementById('queue-rows');
@@ -75,15 +83,64 @@ function showRegister() {
   hideAlert();
 }
 
-function showDashboard(email) {
+function showDashboard(email, role) {
+  currentRole = role;
+  const isOps = role === 'underwriter';
   appEl.classList.add('dashboard-wide');
   loginForm.classList.add('hidden');
   registerForm.classList.add('hidden');
   dashboardView.classList.remove('hidden');
-  userInfo.textContent = `Logged in as: ${email}`;
+  userInfo.textContent = `Logged in as: ${email} · ${isOps ? 'Ops / Underwriter' : 'Applicant'}`;
   hideAlert();
-  showQueue();
-  fetchQueue();
+
+  // Ops-only chrome
+  document.getElementById('ops-toggle-btn').classList.toggle('hidden', !isOps);
+  document.getElementById('ops-panel').classList.add('hidden');
+  detailView.classList.add('hidden');
+
+  if (isOps) {
+    queueView.classList.remove('hidden');
+    applicantView.classList.add('hidden');
+    fetchQueue();
+  } else {
+    queueView.classList.add('hidden');
+    applicantView.classList.remove('hidden');
+    fetchMyApplications();
+  }
+}
+
+async function fetchMyApplications() {
+  try {
+    const res = await fetch(`${API_BASE}/applications/my`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to load your applications');
+    renderMyApplications(await res.json());
+  } catch (error) {
+    showAlert(error.message);
+  }
+}
+
+function renderMyApplications(apps) {
+  applicantRows.innerHTML = '';
+  applicantEmpty.classList.toggle('hidden', apps.length > 0);
+  apps.forEach((a) => {
+    const cls = { Approved: 'badge-low', Denied: 'badge-high', Pending: 'badge-medium' }[a.decision_status] || 'badge-medium';
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${escapeHtml(a.external_id)}</td>
+      <td>${escapeHtml(a.loan_scheme || '-')}</td>
+      <td>${formatCurrency(a.amt_credit)}</td>
+      <td>${a.status === 'COMPLETE' ? 'Complete' : 'Incomplete'}</td>
+      <td><span class="badge ${cls}">${escapeHtml(a.decision_status)}</span></td>`;
+    applicantRows.appendChild(row);
+  });
+}
+
+// Refresh whichever application view is active (used after ingest).
+function refreshApplications() {
+  if (currentRole === 'underwriter') fetchQueue();
+  else fetchMyApplications();
 }
 
 function showQueue() {
@@ -158,7 +215,7 @@ async function handleRegister(e) {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ email, password })
+      body: JSON.stringify({ email, password, role: regRole.value })
     });
 
     if (!res.ok) {
@@ -188,7 +245,7 @@ async function fetchUserDetails() {
     }
 
     const user = await res.json();
-    showDashboard(user.email);
+    showDashboard(user.email, user.role);
   } catch (error) {
     token = null;
     localStorage.removeItem('halcyon_token');
@@ -489,6 +546,7 @@ function openIngest() {
 function closeIngest() { ingestModal.classList.add('hidden'); }
 
 newAppBtn.addEventListener('click', openIngest);
+applicantNewAppBtn.addEventListener('click', openIngest);
 ingestClose.addEventListener('click', closeIngest);
 ingestModal.addEventListener('click', (e) => { if (e.target === ingestModal) closeIngest(); });
 
@@ -516,8 +574,8 @@ ingestForm.addEventListener('submit', async (e) => {
       throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
     }
     closeIngest();
-    showAlert('Application created and added to the queue.', false);
-    fetchQueue();
+    showAlert('Application created.', false);
+    refreshApplications();
   } catch (err) {
     ingestError.textContent = err.message;
     ingestError.classList.remove('hidden');

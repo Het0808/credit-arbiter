@@ -53,3 +53,28 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+
+# --- Role-based access control ---
+
+APPLICANT = "applicant"
+UNDERWRITER = "underwriter"  # the ops/underwriter role
+VALID_ROLES = {APPLICANT, UNDERWRITER}
+
+
+def require_roles(*roles):
+    """Dependency factory: 403 unless the current user has one of ``roles``."""
+
+    def checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires role: {' or '.join(roles)}",
+            )
+        return current_user
+
+    return checker
+
+
+# Ops-only endpoints (assess, decide, dashboards, all-applications view).
+require_ops = require_roles(UNDERWRITER)

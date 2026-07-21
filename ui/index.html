@@ -44,6 +44,13 @@
             <label for="reg-password">Password</label>
             <input type="password" id="reg-password" required placeholder="••••••••">
           </div>
+          <div class="input-group">
+            <label for="reg-role">I am a…</label>
+            <select id="reg-role">
+              <option value="applicant">Applicant (apply &amp; track my loan)</option>
+              <option value="underwriter">Ops / Underwriter (review &amp; decide)</option>
+            </select>
+          </div>
           <button type="submit" class="btn primary-btn">Register</button>
           <p class="switch-mode">Already have an account? <a href="#" id="show-login">Sign In</a></p>
         </form>
@@ -91,6 +98,27 @@
               </thead>
               <tbody id="queue-rows"></tbody>
             </table>
+          </div>
+
+          <!-- Applicant view (their own applications + status) -->
+          <div id="applicant-view" class="hidden">
+            <div class="queue-header">
+              <h3 class="section-heading">My Applications</h3>
+              <button id="applicant-new-app-btn" class="btn primary-btn">＋ New Application</button>
+            </div>
+            <table class="queue-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Scheme</th>
+                  <th>Credit</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="applicant-rows"></tbody>
+            </table>
+            <p id="applicant-empty" class="ingest-hint hidden">You have no applications yet — click “New Application” to apply.</p>
           </div>
 
           <!-- Application Detail + Assess -->

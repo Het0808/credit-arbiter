@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..auth import get_current_user
+from ..auth import require_ops
 from ..database import get_db
 from ..models import Application, User
 from ..schemas import ScoreRequest, ScoreResponse
@@ -12,7 +12,7 @@ router = APIRouter(prefix="/score", tags=["scoring"])
 
 @router.post("", response_model=ScoreResponse)
 def score(
-    request: ScoreRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    request: ScoreRequest, db: Session = Depends(get_db), current_user: User = Depends(require_ops)
 ):
     application = db.query(Application).filter(Application.id == request.application_id).first()
     if not application:
